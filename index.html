@@ -3,16 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <title>一致団結ポスティングマップ</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100dvh;
+      min-height: 100dvh;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+    }
     h1 {
       background-color: #e4007f;
       color: white;
-      padding: 10px;
+      padding: 12px 10px 10px 10px;
       margin: 0;
-      font-size: 1.5em;
+      font-size: 1.3em;
+      letter-spacing: 0.05em;
     }
     #form {
       padding: 10px;
@@ -22,18 +39,31 @@
       gap: 1rem;
       align-items: center;
       font-size: 0.95em;
+      flex-wrap: wrap;
     }
     #form label {
       display: flex;
       flex-direction: column;
       font-weight: bold;
+      min-width: 120px;
+      margin-bottom: 4px;
+      font-size: 1em;
     }
     #form input {
       margin-top: 4px;
       padding: 4px;
-      font-size: 0.9em;
+      font-size: 0.95em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      min-width: 90px;
     }
-    #map { height: 85vh; width: 100%; }
+    #map {
+      flex: 1 1 auto;
+      height: 70vh;
+      width: 100%;
+      min-height: 350px;
+      max-height: 100dvh;
+    }
     .leaflet-div-icon {
       width: 6px !important;
       height: 6px !important;
@@ -42,6 +72,54 @@
       border-radius: 3px !important;
       border: 2px solid #e4007f !important;
       background: #fff !important;
+    }
+    /* Leaflet/DrawのUI調整 for touch & small screens */
+    .leaflet-control, .leaflet-draw-section, .leaflet-draw-toolbar {
+      touch-action: manipulation;
+    }
+    /* ポップアップのサイズ・文字大きさ調整 */
+    .leaflet-popup-content {
+      font-size: 1em;
+      word-break: break-word;
+      min-width: 120px;
+      max-width: 70vw;
+    }
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.05em;
+        padding: 9px 5px 7px 5px;
+      }
+      #form {
+        padding: 6px 3vw 6px 3vw;
+        gap: 0.4rem;
+        font-size: 0.9em;
+      }
+      #form label {
+        min-width: 90px;
+        font-size: 0.95em;
+      }
+      #form input {
+        font-size: 0.93em;
+        min-width: 70px;
+      }
+      #map {
+        height: 58vh;
+        min-height: 220px;
+      }
+      .leaflet-popup-content {
+        font-size: 0.96em;
+        min-width: 90px;
+        max-width: 90vw;
+      }
+      .leaflet-control {
+        font-size: 0.97em !important;
+      }
+    }
+    @media (max-width: 400px) {
+      #form label {
+        min-width: 70px;
+        font-size: 0.9em;
+      }
     }
   </style>
 </head>
@@ -68,7 +146,8 @@
       L.drawLocal.edit.toolbar.buttons.edit = '図形を編集';
       L.drawLocal.edit.toolbar.buttons.remove = '図形を削除';
     }
-    const map = L.map('map').setView([35.6996, 139.7652], 13);
+    // 地図初期化
+    const map = L.map('map', { tap: false }).setView([35.6996, 139.7652], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
@@ -145,29 +224,42 @@
       });
     });
 
-    // 編集・削除ガイド
-    map.on('draw:editstart', function() {});
-    map.on('draw:editstop', function() {});
-
     function setupPolygonEvents(layer, date, name) {
       // 既存のポップアップをクリア
       layer.unbindPopup();
       // ポップアップ内容
       const popupContent = `<strong>実施日:</strong> ${date}<br><strong>名前:</strong> ${name || "（なし）"}`;
 
-      // マウスオーバーでポップアップ表示、マウスアウトで閉じる
-      layer.on('mouseover', function(e) {
-        layer.bindPopup(popupContent, { closeButton: false, autoPan: false }).openPopup();
-      });
-      layer.on('mouseout', function(e) {
-        layer.closePopup();
-      });
+      // タッチ/マウスオーバーでポップアップ表示、タッチ/マウスアウトで閉じる
+      // スマホ対応: clickで表示, map clickで閉じる、PCはmouseover/mouseout
+      let isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-      // 編集開始はクリック
-      layer.on('click', function(e) {
-        L.DomEvent.stopPropagation(e);
-        enableEdit(layer);
-      });
+      if (isTouch) {
+        layer.on('click', function(e) {
+          layer.bindPopup(popupContent, { closeButton: false, autoPan: true }).openPopup();
+          // 編集開始は長押し（ダブルタップ）でなくシングルタップでよい場合は下記で
+          setTimeout(() => {
+            enableEdit(layer);
+          }, 350);
+        });
+        // 地図クリックでポップアップを閉じる
+        map.on('click', function(e) {
+          layer.closePopup();
+        });
+      } else {
+        // マウスオーバー時に吹き出し
+        layer.on('mouseover', function(e) {
+          layer.bindPopup(popupContent, { closeButton: false, autoPan: false }).openPopup();
+        });
+        layer.on('mouseout', function(e) {
+          layer.closePopup();
+        });
+        // 編集開始はクリック
+        layer.on('click', function(e) {
+          L.DomEvent.stopPropagation(e);
+          enableEdit(layer);
+        });
+      }
 
       // ダブルクリックで削除
       layer.on('dblclick', function(e) {
@@ -192,6 +284,20 @@
       }
     });
 
+    // iOS Safari用 高さリサイズ
+    function resizeMapHeight() {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+      const mapDiv = document.getElementById('map');
+      if (window.innerWidth <= 600) {
+        mapDiv.style.height = (window.innerHeight - document.getElementById('form').offsetHeight - document.querySelector('h1').offsetHeight - 12) + 'px';
+      } else {
+        mapDiv.style.height = '';
+      }
+    }
+    window.addEventListener('resize', resizeMapHeight);
+    window.addEventListener('orientationchange', resizeMapHeight);
+    resizeMapHeight();
   </script>
 </body>
 </html>
