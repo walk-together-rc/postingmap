@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>ポスティングマップ</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>ポスティングマップ</h1>
+  <div id="map"></div>
+
+  <!-- 入力フォーム -->
+  <div id="info-form" class="hidden">
+    <label>実施日（必須）:<input type="date" id="date" required /></label>
+    <label>名前（任意）:<input type="text" id="name" /></label>
+    <button onclick="savePolygonData()">保存</button>
+    <button onclick="cancelEdit()">キャンセル</button>
+  </div>
+
+  <script src="script.js"></script>
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=drawing&callback=initMap">
+  </script>
+</body>
+</html>
