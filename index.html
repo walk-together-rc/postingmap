@@ -40,6 +40,8 @@
       align-items: center;
       font-size: 0.95em;
       flex-wrap: wrap;
+      position: relative;
+      z-index: 1002; /* ここでフォーム・ヘルプを地図より前面に */
     }
     #form label {
       display: flex;
@@ -63,6 +65,7 @@
       width: 100%;
       min-height: 350px;
       max-height: 100dvh;
+      z-index: 1;
     }
     .leaflet-div-icon {
       width: 6px !important;
@@ -73,22 +76,78 @@
       border: 2px solid #e4007f !important;
       background: #fff !important;
     }
-    /* Leaflet/DrawのUI調整 for touch & small screens */
-    .leaflet-control, .leaflet-draw-section, .leaflet-draw-toolbar {
-      touch-action: manipulation;
+    /* フォーム右端のヘルプアイコン */
+    .custom-help-container {
+      position: absolute;
+      top: 50%;
+      right: 8px;
+      transform: translateY(-50%);
+      z-index: 1003; /* 地図・フォームより前面に */
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      pointer-events: none;
     }
-    /* ポップアップのサイズ・文字大きさ調整 */
-    .leaflet-popup-content {
-      font-size: 1em;
-      word-break: break-word;
-      min-width: 120px;
+    .custom-help-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #fff;
+      color: #e4007f;
+      border: 2px solid #e4007f;
+      font-size: 22px;
+      font-weight: bold;
+      text-align: center;
+      line-height: 28px;
+      box-shadow: 0 2px 6px rgba(60,64,67,0.12);
+      cursor: pointer;
+      user-select: none;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .custom-help-btn:active, .custom-help-btn:focus {
+      background: #e4007f;
+      color: #fff;
+    }
+    .custom-help-balloon {
+      position: absolute;
+      top: 38px;
+      right: 0;
+      width: 270px;
       max-width: 70vw;
+      background: #fff;
+      color: #333;
+      font-size: 1em;
+      border: 1.5px solid #e4007f;
+      border-radius: 7px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.16);
+      padding: 15px 14px 15px 18px;
+      z-index: 1004; /* 吹き出しが必ず最前面になるように */
+      pointer-events: auto;
+      word-break: break-word;
+      line-height: 1.7;
+      display: none;
+    }
+    .custom-help-balloon:before {
+      content: "";
+      position: absolute;
+      top: -13px;
+      right: 20px;
+      border: 7px solid transparent;
+      border-bottom: 10px solid #e4007f;
+    }
+    .custom-help-balloon:after {
+      content: "";
+      position: absolute;
+      top: -11px;
+      right: 22px;
+      border: 6px solid transparent;
+      border-bottom: 10px solid #fff;
     }
     @media (max-width: 600px) {
-      h1 {
-        font-size: 1.05em;
-        padding: 9px 5px 7px 5px;
-      }
       #form {
         padding: 6px 3vw 6px 3vw;
         gap: 0.4rem;
@@ -102,17 +161,25 @@
         font-size: 0.93em;
         min-width: 70px;
       }
-      #map {
-        height: 58vh;
-        min-height: 220px;
+      .custom-help-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 18px;
+        line-height: 24px;
       }
-      .leaflet-popup-content {
-        font-size: 0.96em;
-        min-width: 90px;
-        max-width: 90vw;
+      .custom-help-balloon {
+        width: 90vw;
+        max-width: 95vw;
+        font-size: 0.98em;
+        right: 0;
+        top: 32px;
+        padding: 11px 8px 11px 13px;
       }
-      .leaflet-control {
-        font-size: 0.97em !important;
+      .custom-help-balloon:before {
+        right: 16px;
+      }
+      .custom-help-balloon:after {
+        right: 18px;
       }
     }
     @media (max-width: 400px) {
@@ -132,6 +199,17 @@
     <label>名前（任意）
       <input type="text" id="name" />
     </label>
+    <!-- フォーム右端 ヘルプボタン&吹き出し -->
+    <div class="custom-help-container" id="customHelpContainer">
+      <button class="custom-help-btn" id="customHelpBtn" title="操作方法">？</button>
+      <div class="custom-help-balloon" id="customHelpBalloon">
+        ＜操作方法＞<br>
+        1. 実施日・名前を入力する<br>
+        2. サイドメニューから「ポリゴンを描画」を選択し、ポスティング実施エリアを囲うようにしてマーキングする<br>
+        <br>
+        修正は図形を1クリック、削除は2クリックでできます。
+      </div>
+    </div>
   </div>
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -227,40 +305,30 @@
     function setupPolygonEvents(layer, date, name) {
       // 既存のポップアップをクリア
       layer.unbindPopup();
-      // ポップアップ内容
       const popupContent = `<strong>実施日:</strong> ${date}<br><strong>名前:</strong> ${name || "（なし）"}`;
-
-      // タッチ/マウスオーバーでポップアップ表示、タッチ/マウスアウトで閉じる
-      // スマホ対応: clickで表示, map clickで閉じる、PCはmouseover/mouseout
       let isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
       if (isTouch) {
         layer.on('click', function(e) {
           layer.bindPopup(popupContent, { closeButton: false, autoPan: true }).openPopup();
-          // 編集開始は長押し（ダブルタップ）でなくシングルタップでよい場合は下記で
           setTimeout(() => {
             enableEdit(layer);
           }, 350);
         });
-        // 地図クリックでポップアップを閉じる
         map.on('click', function(e) {
           layer.closePopup();
         });
       } else {
-        // マウスオーバー時に吹き出し
         layer.on('mouseover', function(e) {
           layer.bindPopup(popupContent, { closeButton: false, autoPan: false }).openPopup();
         });
         layer.on('mouseout', function(e) {
           layer.closePopup();
         });
-        // 編集開始はクリック
         layer.on('click', function(e) {
           L.DomEvent.stopPropagation(e);
           enableEdit(layer);
         });
       }
-
       // ダブルクリックで削除
       layer.on('dblclick', function(e) {
         L.DomEvent.stopPropagation(e);
@@ -298,6 +366,24 @@
     window.addEventListener('resize', resizeMapHeight);
     window.addEventListener('orientationchange', resizeMapHeight);
     resizeMapHeight();
+
+    // ヘルプボタンのふきだし表示制御
+    const helpBtn = document.getElementById('customHelpBtn');
+    const helpBalloon = document.getElementById('customHelpBalloon');
+    let helpOpen = false;
+    function toggleHelpBalloon(e) {
+      e.stopPropagation();
+      helpOpen = !helpOpen;
+      helpBalloon.style.display = helpOpen ? 'block' : 'none';
+    }
+    helpBtn.addEventListener('click', toggleHelpBalloon);
+    // バルーン以外クリックで閉じる
+    document.addEventListener('click', function(e) {
+      if (helpOpen && !helpBtn.contains(e.target) && !helpBalloon.contains(e.target)) {
+        helpBalloon.style.display = 'none';
+        helpOpen = false;
+      }
+    });
   </script>
 </body>
 </html>
