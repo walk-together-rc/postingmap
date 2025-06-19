@@ -255,6 +255,19 @@
     });
     map.addControl(drawControl);
 
+fetch('http://localhost:3001/api/polygons')
+  .then(res => res.json())
+  .then(polygons => {
+    polygons.forEach(geojson => {
+      L.geoJSON(geojson).eachLayer(layer => {
+        drawnItems.addLayer(layer);
+      });
+    });
+  })
+  .catch(err => {
+    console.error('既存ポリゴン取得失敗', err);
+  });
+
     // ポリゴン追加時
     map.on(L.Draw.Event.CREATED, function (e) {
       const layer = e.layer;
