@@ -83,7 +83,6 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
   <script>
-    // 日本語化
     if (window.L && window.L.drawLocal) {
       L.drawLocal.draw.toolbar.buttons.polygon = 'ポリゴンを描画';
       L.drawLocal.edit.toolbar.buttons.edit = '';
@@ -92,21 +91,18 @@
       L.drawLocal.edit.handlers.remove.tooltip.subtext = 'もう一度クリックで削除を解除';
     }
 
-    // 地図初期化
     const map = L.map('map', { tap: false }).setView([35.6996, 139.7652], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
     const drawnItems = new L.FeatureGroup().addTo(map);
 
-    // ポリゴン基本style
     const polygonStyle = {
       color: "#e4007f",
       fillColor: "#e4007f",
       fillOpacity: 0.4
     };
 
-    // ポリゴン描画ボタン＋削除ボタンのみ表示
     const drawControl = new L.Control.Draw({
       position: 'topleft',
       edit: { featureGroup: drawnItems, edit: false, remove: true },
@@ -143,7 +139,6 @@
     }
     setTimeout(customizeRemoveBtn, 500);
 
-    // 吹き出し・編集
     function bindPolygonInfo(layer, date, name) {
       let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
       layer.bindPopup(infoHtml, { closeButton: false });
@@ -157,15 +152,18 @@
     function applyLayerBindings(layer, geojson) {
       const date = geojson.properties && geojson.properties.date;
       const name = geojson.properties && geojson.properties.name;
-      const id = geojson.properties && geojson.properties.id;
       bindPolygonInfo(layer, date, name);
     }
 
-    // ページ表示時に全ポリゴン取得して描画
+    // 配列かチェックしてからforEachする
     window.addEventListener('DOMContentLoaded', function() {
       fetch('http://localhost:3001/api/polygons')
         .then(res => res.json())
         .then(polygons => {
+          if (!Array.isArray(polygons)) {
+            alert('ポリゴン取得でエラー: ' + JSON.stringify(polygons));
+            return;
+          }
           drawnItems.clearLayers();
           polygons.forEach(geojson => {
             if (
@@ -184,7 +182,6 @@
         });
     });
 
-    // ポリゴン新規作成
     map.on(L.Draw.Event.CREATED, function (e) {
       const layer = e.layer;
       layer.setStyle && layer.setStyle(polygonStyle);
@@ -220,7 +217,6 @@
         });
     });
 
-    // 編集時も保存
     map.on('draw:edited', function (e) {
       e.layers.eachLayer(function (layer) {
         let geojson = layer.toGeoJSON();
@@ -240,7 +236,6 @@
       });
     });
 
-    // 削除イベント（draw:deleted）でサーバー側も一括削除
     map.on('draw:deleted', function (e) {
       let ids = [];
       e.layers.eachLayer(function (layer) {
