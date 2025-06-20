@@ -41,6 +41,12 @@
       background: #e4007f;
       border-color: #e4007f;
     }
+    /* 削除ツールバーの「Clear All」非表示 */
+    .leaflet-draw-actions li.leaflet-draw-action[title*="Clear All"],
+    .leaflet-draw-actions li.leaflet-draw-action[title*="全削除"],
+    .leaflet-draw-actions li.leaflet-draw-action[title*="クリア"] {
+      display: none !important;
+    }
     @media (max-width: 600px) {
       #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
       #form label { min-width: 90px; font-size: 0.95em; }
@@ -75,8 +81,7 @@
         2. サイドメニューから「ポリゴンを描画」を選択し、ポスティング実施エリアを囲うようにしてマーキングする<br>
         <br>
         ■図形の編集<br>
-        （スマホ）図形タップで吹き出し＆編集開始、図形以外タップで編集終了<br>
-        （PC）図形にマウスを乗せると吹き出し、図形クリックで編集開始、図形以外クリックで編集終了<br>
+        図形選択→自由に変形→図形以外をタップ<br>
         <br>
         ■図形の削除<br>
         削除ボタン→図形選択→Saveボタン
@@ -146,6 +151,14 @@
         <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="#d32f2f"/></svg>
         `;
       }
+      // 「Clear All」アクションを非表示
+      const actions = document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action');
+      actions.forEach(li => {
+        const t = li.getAttribute('title') || '';
+        if (t.includes('Clear All') || t.includes('全削除') || t.includes('クリア')) {
+          li.style.display = 'none';
+        }
+      });
     }
     setTimeout(customizeRemoveBtn, 500);
 
