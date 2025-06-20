@@ -2,11 +2,12 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>ポリゴン表示サンプル</title>
+  <title>ポリゴン地図サンプル</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
   <style>
     #map { height: 80vh; }
+    .leaflet-div-icon { width: 6px !important; height: 6px !important; margin-left: -3px !important; margin-top: -3px !important; border-radius: 3px !important; border: 2px solid #e4007f !important; background: #fff !important; }
   </style>
 </head>
 <body>
@@ -19,25 +20,62 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    // 2. 描画グループ
     const drawnItems = new L.FeatureGroup().addTo(map);
 
-    // 2. ページ読み込み時にAPIからポリゴン一覧取得・表示
+    // 3. ページ表示時にサーバーからポリゴン一覧を取得して描画
     window.addEventListener('DOMContentLoaded', function() {
       fetch('http://localhost:3001/api/polygons')
         .then(res => res.json())
         .then(polygons => {
-          // polygonsはGeoJSONの配列
           drawnItems.clearLayers();
           polygons.forEach(geojson => {
-            L.geoJSON(geojson).eachLayer(layer => {
-              drawnItems.addLayer(layer);
-            });
+            // GeoJSONが本当に正しいか最低限チェック
+            if (
+              geojson &&
+              geojson.type === "Feature" &&
+              geojson.geometry &&
+              geojson.geometry.type === "Polygon" &&
+              Array.isArray(geojson.geometry.coordinates)
+            ) {
+              L.geoJSON(geojson).eachLayer(layer => {
+                drawnItems.addLayer(layer);
+              });
+            }
           });
         })
         .catch(err => {
           console.error('ポリゴン取得エラー', err);
         });
     });
+
+    // 4. (参考) 描画コントロール設置
+    const drawControl = new L.Control.Draw({
+      position: 'topleft',
+      edit: { featureGroup: drawnItems },
+      draw: {
+        polygon: {
+          allowIntersection: false,
+          showArea: true,
+          shapeOptions: {
+            color: "#e4007f",
+            fillColor: "#e4007f",
+            fillOpacity: 0.4
+          },
+          icon: new L.DivIcon({
+            iconSize: new L.Point(6, 6),
+            className: 'leaflet-div-icon'
+          })
+        },
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+        circlemarker: false
+      }
+    });
+    map.addControl(drawControl);
   </script>
 </body>
 </html>
