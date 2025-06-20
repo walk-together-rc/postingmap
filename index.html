@@ -274,25 +274,26 @@
       });
     });
 
-    // 削除イベント（draw:deleted）でサーバー側も更新
+    // 削除イベント（draw:deleted）でサーバー側も一括削除
     map.on('draw:deleted', function (e) {
-      let deletePromises = [];
+      let ids = [];
       e.layers.eachLayer(function (layer) {
         let geojson = layer.toGeoJSON();
         let id = geojson.properties && geojson.properties.id;
         if (id) {
-          deletePromises.push(
-            fetch('http://localhost:3001/api/delete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: id })
-            }).then(res => res.json())
-          );
+          ids.push(id);
         }
       });
-      Promise.all(deletePromises)
-        .then(results => {
-          // 全削除完了後の処理（必要に応じて）
+      if (ids.length === 0) return;
+      fetch('http://localhost:3001/api/delete-multi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids })
+      }).then(res => res.json())
+        .then(result => {
+          if (!result.status || result.status !== "ok") {
+            alert('一部の削除に失敗しました');
+          }
         })
         .catch(err => {
           alert('削除処理でエラーが発生しました');
