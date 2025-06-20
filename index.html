@@ -21,6 +21,8 @@
     .custom-help-balloon { position: absolute; top: 38px; right: 0; width: 270px; max-width: 70vw; background: #fff; color: #333; font-size: 1em; border: 1.5px solid #e4007f; border-radius: 7px; box-shadow: 0 2px 12px rgba(0,0,0,0.16); padding: 15px 14px 15px 18px; z-index: 1004; pointer-events: auto; word-break: break-word; line-height: 1.7; display: none; }
     .custom-help-balloon:before { content: ""; position: absolute; top: -13px; right: 20px; border: 7px solid transparent; border-bottom: 10px solid #e4007f; }
     .custom-help-balloon:after { content: ""; position: absolute; top: -11px; right: 22px; border: 6px solid transparent; border-bottom: 10px solid #fff; }
+    /* 吹き出し（popup）の閉じるボタン非表示 */
+    .leaflet-popup-close-button { display: none !important; }
     @media (max-width: 600px) {
       #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
       #form label { min-width: 90px; font-size: 0.95em; }
@@ -33,7 +35,6 @@
     @media (max-width: 400px) {
       #form label { min-width: 70px; font-size: 0.9em; }
     }
-    /* 念のためサイドナビの編集/削除ボタンも非表示 */
     .leaflet-draw-toolbar .leaflet-draw-edit-edit,
     .leaflet-draw-toolbar .leaflet-draw-edit-remove { display: none !important; }
   </style>
@@ -62,12 +63,11 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
   <script>
-    // === カレンダーをラベル全体クリックで起動 ===
+    // 実施日のラベルをクリックでカレンダー起動
     document.addEventListener('DOMContentLoaded', function() {
       const dateLabel = document.getElementById('date-label');
       const dateInput = document.getElementById('date');
       dateLabel.addEventListener('click', function(e){
-        // input自体でなければカレンダー起動
         if (e.target !== dateInput) {
           dateInput.focus();
           dateInput.click();
@@ -81,21 +81,15 @@
       L.drawLocal.draw.handlers.polygon.tooltip.start = 'クリックしてポリゴンの最初の点を指定';
       L.drawLocal.draw.handlers.polygon.tooltip.cont = 'クリックしてポリゴンの次の点を指定';
       L.drawLocal.draw.handlers.polygon.tooltip.end = '最初の点をクリックしてポリゴンを閉じる';
-      // 編集・削除ボタン自体は非表示だが念のため
       L.drawLocal.edit.toolbar.buttons.edit = '';
       L.drawLocal.edit.toolbar.buttons.remove = '';
     }
 
-    // 地図初期化
     const map = L.map('map', { tap: false }).setView([35.6996, 139.7652], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
     const drawnItems = new L.FeatureGroup().addTo(map);
-
-    // 編集用の一時FeatureGroup
-    const editLayerGroup = new L.FeatureGroup();
-    map.addLayer(editLayerGroup);
 
     const polygonStyle = {
       color: "#e4007f",
@@ -103,7 +97,14 @@
       fillOpacity: 0.4
     };
 
-    // 編集/削除ツールバーを消すためedit: false
+    // 編集用グループ
+    const editLayerGroup = new L.FeatureGroup();
+    map.addLayer(editLayerGroup);
+
+    // 編集Handler
+    let editHandler = null;
+    let editingLayer = null;
+
     const drawControl = new L.Control.Draw({
       position: 'topleft',
       edit: false,
@@ -129,48 +130,42 @@
     // 吹き出し
     function bindPolygonInfo(layer, date, name) {
       let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
-      layer.bindPopup(infoHtml);
-
+      layer.bindPopup(infoHtml, { closeButton: false });
       // PC: hoverでshow、SP: タップでshow
       if ('ontouchstart' in window) {
-        layer.on('click', function(e) {
-          layer.openPopup();
-        });
+        layer.on('click', function(e) { layer.openPopup(); });
       } else {
-        layer.on('mouseover', function(e) {
-          layer.openPopup();
-        });
-        layer.on('mouseout', function(e) {
-          layer.closePopup();
-        });
+        layer.on('mouseover', function(e) { layer.openPopup(); });
+        layer.on('mouseout', function(e) { layer.closePopup(); });
       }
     }
 
     // 編集イベント(PC:1クリック, SP:1タップ)でそのポリゴンだけ編集モード
-    function bindPolygonEditEvent(layer) {
+    function bindPolygonEditEvent(layer, id) {
       layer.on('click', function(e) {
-        // 既存の編集グループをクリアして対象ポリゴンだけ追加
+        if (editingLayer === layer) return; // すでに編集中の場合は何もしない
+        // 編集解除
+        if (editHandler) { editHandler.disable(); }
         editLayerGroup.clearLayers();
+        editingLayer = layer;
         editLayerGroup.addLayer(layer);
-
         // 編集モードON
-        if (!editHandler) {
-          editHandler = new L.EditToolbar.Edit(map, {
-            featureGroup: editLayerGroup
-          });
-        }
+        editHandler = new L.EditToolbar.Edit(map, { featureGroup: editLayerGroup });
         editHandler.enable();
+
+        // mapクリックで編集終了
+        map.once('click', function(ev) {
+          if (editHandler) {
+            editHandler.disable();
+            editLayerGroup.clearLayers();
+            editingLayer = null;
+          }
+        });
       });
     }
-    let editHandler = null;
-    // 編集終了時の後処理
-    map.on('draw:editstop', function(){
-      editLayerGroup.clearLayers();
-      if (editHandler) editHandler.disable();
-    });
 
     // 2回クリック/2連続タップで削除確認&削除
-    function bindPolygonDeleteEvent(layer) {
+    function bindPolygonDeleteEvent(layer, id) {
       let lastTap = 0, tapCount = 0;
       const isTouch = 'ontouchstart' in window;
       if (isTouch) {
@@ -184,7 +179,7 @@
               fetch('http://localhost:3001/api/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: layer._leaflet_id })
+                body: JSON.stringify({ id: id })
               }).then(res => res.json())
                 .then(json => {
                   if (json.status === 'ok') drawnItems.removeLayer(layer);
@@ -202,7 +197,7 @@
             fetch('http://localhost:3001/api/delete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: layer._leaflet_id })
+              body: JSON.stringify({ id: id })
             }).then(res => res.json())
               .then(json => {
                 if (json.status === 'ok') drawnItems.removeLayer(layer);
@@ -221,15 +216,17 @@
       .then(polygons => {
         polygons.forEach(obj => {
           let geojson = obj;
-          let date = "", name = "";
+          let date = "", name = "", id = "";
+          // サーバー側でpropertiesにdate, name, idを必ず埋め込むこと
           if (geojson.properties) {
             date = geojson.properties.date || "";
             name = geojson.properties.name || "";
+            id = geojson.properties.id || ""; // idは一意な値
           }
           L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
             bindPolygonInfo(layer, date, name);
-            bindPolygonEditEvent(layer);
-            bindPolygonDeleteEvent(layer);
+            bindPolygonEditEvent(layer, id);
+            bindPolygonDeleteEvent(layer, id);
             drawnItems.addLayer(layer);
           });
         });
@@ -247,10 +244,7 @@
       const date = document.getElementById("date").value;
       const name = document.getElementById("name").value;
 
-      bindPolygonInfo(layer, date, name);
-      bindPolygonEditEvent(layer);
-      bindPolygonDeleteEvent(layer);
-
+      // サーバーで一意なIDを付与して返すようにしている前提
       if (!date) {
         alert("実施日を入力してください");
         drawnItems.removeLayer(layer);
@@ -267,7 +261,12 @@
         })
       }).then(res => res.json())
         .then(json => {
-          if (json.status !== 'ok') {
+          if (json.status === 'ok' && json.id) {
+            // id付きで再バインド
+            bindPolygonInfo(layer, date, name);
+            bindPolygonEditEvent(layer, json.id);
+            bindPolygonDeleteEvent(layer, json.id);
+          } else {
             alert('保存に失敗しました: ' + (json.error || ''));
             drawnItems.removeLayer(layer);
           }
@@ -280,16 +279,18 @@
     // ポリゴン編集時
     map.on('draw:edited', function (e) {
       e.layers.eachLayer(function (layer) {
+        let geojson = layer.toGeoJSON();
+        let id = geojson.properties && geojson.properties.id;
         const date = document.getElementById("date").value;
         const name = document.getElementById("name").value;
         fetch('http://localhost:3001/api/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            id: layer._leaflet_id,
+            id: id,
             date,
             name,
-            polygon: layer.toGeoJSON()
+            polygon: geojson
           })
         }).then(res => res.json())
           .then(json => {
