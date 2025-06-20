@@ -15,6 +15,7 @@
     #form input { margin-top: 4px; padding: 4px; font-size: 0.95em; border: 1px solid #ccc; border-radius: 4px; min-width: 90px; box-sizing: border-box; }
     #map { flex: 1 1 auto; height: 70vh; width: 100%; min-height: 350px; max-height: 100dvh; z-index: 1; }
     .leaflet-div-icon { width: 6px !important; height: 6px !important; margin-left: -3px !important; margin-top: -3px !important; border-radius: 3px !important; border: 2px solid #e4007f !important; background: #fff !important; }
+
     .custom-help-container { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); z-index: 1003; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
     .custom-help-btn { width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #e4007f; border: 2px solid #e4007f; font-size: 22px; font-weight: bold; text-align: center; line-height: 28px; box-shadow: 0 2px 6px rgba(60,64,67,0.12); cursor: pointer; user-select: none; pointer-events: auto; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
     .custom-help-btn:active, .custom-help-btn:focus { background: #e4007f; color: #fff; }
@@ -37,6 +38,18 @@
     }
     .leaflet-draw-toolbar .leaflet-draw-edit-edit,
     .leaflet-draw-toolbar .leaflet-draw-edit-remove { display: none !important; }
+    /* 戻るボタン用 */
+    .custom-undo-btn {
+      background: #fff; color: #e4007f; border: 2px solid #e4007f;
+      border-radius: 5px; padding: 4px 14px; margin-top: 7px;
+      font-size: 16px; font-weight: bold; cursor: pointer; display: block;
+      transition: background 0.15s, color 0.15s;
+      box-shadow: 0 1px 3px rgba(60,64,67,0.13);
+    }
+    .custom-undo-btn:active, .custom-undo-btn:focus {
+      background: #e4007f;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -55,7 +68,8 @@
         1. 実施日・名前を入力する<br>
         2. サイドメニューから「ポリゴンを描画」を選択し、ポスティング実施エリアを囲うようにしてマーキングする<br>
         <br>
-        修正は図形を1クリック（スマホは1タップ）、削除は2回クリック（スマホは2連続タップ）でできます。
+        修正は図形を1クリック（スマホは1タップ）、削除は2回クリック（スマホは2連続タップ）でできます。<br>
+        戻るボタンで一つ前の操作に戻せます。
       </div>
     </div>
   </div>
@@ -97,6 +111,61 @@
       fillOpacity: 0.4
     };
 
+    // Undo履歴管理
+    let undoStack = [];
+    function pushUndo() {
+      // 現在のレイヤー情報をすべて保存
+      let state = [];
+      drawnItems.eachLayer(layer => {
+        if (layer.toGeoJSON) {
+          state.push(layer.toGeoJSON());
+        }
+      });
+      undoStack.push(state);
+      // スタック最大数制限（例:20）
+      if (undoStack.length > 20) undoStack.shift();
+    }
+    function popUndo() {
+      if (undoStack.length === 0) return;
+      const prevState = undoStack.pop();
+      drawnItems.clearLayers();
+      prevState.forEach(geojson => {
+        L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
+          applyLayerBindings(layer, geojson);
+          drawnItems.addLayer(layer);
+        });
+      });
+    }
+
+    // Undoボタンをカスタムで追加
+    L.Control.CustomUndo = L.Control.extend({
+      onAdd: function(map) {
+        var btn = L.DomUtil.create('button', 'custom-undo-btn');
+        btn.innerText = '戻る';
+        btn.title = 'ひとつ前の操作に戻る';
+        btn.onclick = function(e) {
+          e.stopPropagation();
+          popUndo();
+        };
+        return btn;
+      },
+      onRemove: function(map) {}
+    });
+    // サイドナビの「ポリゴンを描画」ボタンの下に設置
+    map.on('draw:created', function(){});
+    setTimeout(function(){
+      // Leaflet Drawのコントロールツールバーを探す
+      let toolbar = document.querySelector('.leaflet-draw-toolbar-top');
+      if (toolbar) {
+        let ctrl = new L.Control.CustomUndo({ position: 'topleft' });
+        ctrl.addTo(map);
+        // .leaflet-control の2番目に移動
+        let btn = document.querySelector('.custom-undo-btn');
+        if (btn && toolbar.nextSibling)
+          toolbar.parentNode.insertBefore(btn, toolbar.nextSibling);
+      }
+    }, 500);
+
     // 編集用グループ
     const editLayerGroup = new L.FeatureGroup();
     map.addLayer(editLayerGroup);
@@ -104,28 +173,6 @@
     // 編集Handler
     let editHandler = null;
     let editingLayer = null;
-
-    const drawControl = new L.Control.Draw({
-      position: 'topleft',
-      edit: false,
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          showArea: true,
-          shapeOptions: polygonStyle,
-          icon: new L.DivIcon({
-            iconSize: new L.Point(6, 6),
-            className: 'leaflet-div-icon'
-          })
-        },
-        polyline: false,
-        rectangle: false,
-        circle: false,
-        marker: false,
-        circlemarker: false
-      }
-    });
-    map.addControl(drawControl);
 
     // 吹き出し
     function bindPolygonInfo(layer, date, name) {
@@ -138,6 +185,15 @@
         layer.on('mouseover', function(e) { layer.openPopup(); });
         layer.on('mouseout', function(e) { layer.closePopup(); });
       }
+    }
+
+    function applyLayerBindings(layer, geojson) {
+      const date = geojson.properties && geojson.properties.date;
+      const name = geojson.properties && geojson.properties.name;
+      const id = geojson.properties && geojson.properties.id;
+      bindPolygonInfo(layer, date, name);
+      bindPolygonEditEvent(layer, id);
+      bindPolygonDeleteEvent(layer, id);
     }
 
     // 編集イベント(PC:1クリック, SP:1タップ)でそのポリゴンだけ編集モード
@@ -153,11 +209,35 @@
         editHandler = new L.EditToolbar.Edit(map, { featureGroup: editLayerGroup });
         editHandler.enable();
 
-        // mapクリックで編集終了
+        // mapクリックで編集終了・保存
         map.once('click', function(ev) {
           if (editHandler) {
             editHandler.disable();
             editLayerGroup.clearLayers();
+            // 編集内容を保存
+            if (layer.toGeoJSON) {
+              const geojson = layer.toGeoJSON();
+              // 吹き出しの情報はlayer.geojson.propertiesから
+              const date = geojson.properties && geojson.properties.date || document.getElementById('date').value;
+              const name = geojson.properties && geojson.properties.name || document.getElementById('name').value;
+              fetch('http://localhost:3001/api/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: id,
+                  date,
+                  name,
+                  polygon: geojson
+                })
+              }).then(res => res.json())
+                .then(json => {
+                  if (json.status !== 'ok') {
+                    alert('修正に失敗しました: ' + (json.error || ''));
+                  }
+                }).catch(() => {
+                  alert('サーバーに接続できませんでした');
+                });
+            }
             editingLayer = null;
           }
         });
@@ -214,22 +294,15 @@
     fetch('http://localhost:3001/api/polygons')
       .then(res => res.json())
       .then(polygons => {
-        polygons.forEach(obj => {
-          let geojson = obj;
-          let date = "", name = "", id = "";
-          // サーバー側でpropertiesにdate, name, idを必ず埋め込むこと
-          if (geojson.properties) {
-            date = geojson.properties.date || "";
-            name = geojson.properties.name || "";
-            id = geojson.properties.id || ""; // idは一意な値
-          }
+        drawnItems.clearLayers();
+        polygons.forEach(geojson => {
           L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
-            bindPolygonInfo(layer, date, name);
-            bindPolygonEditEvent(layer, id);
-            bindPolygonDeleteEvent(layer, id);
+            applyLayerBindings(layer, geojson);
             drawnItems.addLayer(layer);
           });
         });
+        // Undoの初期スタック
+        pushUndo();
       })
       .catch(err => {
         console.error('既存ポリゴン取得失敗', err);
@@ -237,6 +310,7 @@
 
     // ポリゴン追加時
     map.on(L.Draw.Event.CREATED, function (e) {
+      pushUndo();
       const layer = e.layer;
       layer.setStyle && layer.setStyle(polygonStyle);
       drawnItems.addLayer(layer);
@@ -244,13 +318,12 @@
       const date = document.getElementById("date").value;
       const name = document.getElementById("name").value;
 
-      // サーバーで一意なIDを付与して返すようにしている前提
       if (!date) {
         alert("実施日を入力してください");
         drawnItems.removeLayer(layer);
         return;
       }
-      // サーバーに追加を通知
+
       fetch('http://localhost:3001/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -263,9 +336,12 @@
         .then(json => {
           if (json.status === 'ok' && json.id) {
             // id付きで再バインド
-            bindPolygonInfo(layer, date, name);
-            bindPolygonEditEvent(layer, json.id);
-            bindPolygonDeleteEvent(layer, json.id);
+            layer.feature = layer.feature || {};
+            layer.feature.properties = layer.feature.properties || {};
+            layer.feature.properties.id = json.id;
+            layer.feature.properties.date = date;
+            layer.feature.properties.name = name;
+            applyLayerBindings(layer, { properties: { id: json.id, date, name } });
           } else {
             alert('保存に失敗しました: ' + (json.error || ''));
             drawnItems.removeLayer(layer);
@@ -278,11 +354,12 @@
 
     // ポリゴン編集時
     map.on('draw:edited', function (e) {
+      pushUndo();
       e.layers.eachLayer(function (layer) {
         let geojson = layer.toGeoJSON();
         let id = geojson.properties && geojson.properties.id;
-        const date = document.getElementById("date").value;
-        const name = document.getElementById("name").value;
+        const date = geojson.properties && geojson.properties.date || document.getElementById("date").value;
+        const name = geojson.properties && geojson.properties.name || document.getElementById("name").value;
         fetch('http://localhost:3001/api/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
