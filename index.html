@@ -7,185 +7,58 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    html, body { height: 100%; margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
-      height: 100dvh;
-      min-height: 100dvh;
-      background: #fff;
-      display: flex;
-      flex-direction: column;
+      font-family: sans-serif; margin: 0; padding: 0; height: 100dvh; min-height: 100dvh;
+      background: #fff; display: flex; flex-direction: column;
     }
-    h1 {
-      background-color: #e4007f;
-      color: white;
-      padding: 12px 10px 10px 10px;
-      margin: 0;
-      font-size: 1.3em;
-      letter-spacing: 0.05em;
-    }
+    h1 { background-color: #e4007f; color: white; padding: 12px 10px 10px 10px; margin: 0; font-size: 1.3em; letter-spacing: 0.05em; }
     #form {
-      padding: 10px;
-      background-color: #f9f9f9;
-      border-bottom: 1px solid #ccc;
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-      font-size: 0.95em;
-      flex-wrap: wrap;
-      position: relative;
-      z-index: 1002;
+      padding: 10px; background-color: #f9f9f9; border-bottom: 1px solid #ccc;
+      display: flex; gap: 1rem; align-items: center; font-size: 0.95em; flex-wrap: wrap; position: relative; z-index: 1002;
     }
-    #form label {
-      display: flex;
-      flex-direction: column;
-      font-weight: bold;
-      min-width: 120px;
-      margin-bottom: 4px;
-      font-size: 1em;
-    }
-    #form input {
-      margin-top: 4px;
-      padding: 4px;
-      font-size: 0.95em;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      min-width: 90px;
-    }
-    #map {
-      flex: 1 1 auto;
-      height: 70vh;
-      width: 100%;
-      min-height: 350px;
-      max-height: 100dvh;
-      z-index: 1;
-    }
+    #form label { display: flex; flex-direction: column; font-weight: bold; min-width: 120px; margin-bottom: 4px; font-size: 1em; }
+    #form input { margin-top: 4px; padding: 4px; font-size: 0.95em; border: 1px solid #ccc; border-radius: 4px; min-width: 90px; }
+    #map { flex: 1 1 auto; height: 70vh; width: 100%; min-height: 350px; max-height: 100dvh; z-index: 1; }
     .leaflet-div-icon {
-      width: 6px !important;
-      height: 6px !important;
-      margin-left: -3px !important;
-      margin-top: -3px !important;
-      border-radius: 3px !important;
-      border: 2px solid #e4007f !important;
-      background: #fff !important;
+      width: 6px !important; height: 6px !important; margin-left: -3px !important; margin-top: -3px !important;
+      border-radius: 3px !important; border: 2px solid #e4007f !important; background: #fff !important;
     }
     .custom-help-container {
-      position: absolute;
-      top: 50%;
-      right: 8px;
-      transform: translateY(-50%);
-      z-index: 1003;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      pointer-events: none;
+      position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+      z-index: 1003; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none;
     }
     .custom-help-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: #fff;
-      color: #e4007f;
-      border: 2px solid #e4007f;
-      font-size: 22px;
-      font-weight: bold;
-      text-align: center;
-      line-height: 28px;
-      box-shadow: 0 2px 6px rgba(60,64,67,0.12);
-      cursor: pointer;
-      user-select: none;
-      pointer-events: auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #e4007f; border: 2px solid #e4007f;
+      font-size: 22px; font-weight: bold; text-align: center; line-height: 28px; box-shadow: 0 2px 6px rgba(60,64,67,0.12);
+      cursor: pointer; user-select: none; pointer-events: auto; display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, color 0.15s;
     }
-    .custom-help-btn:active, .custom-help-btn:focus {
-      background: #e4007f;
-      color: #fff;
-    }
+    .custom-help-btn:active, .custom-help-btn:focus { background: #e4007f; color: #fff; }
     .custom-help-balloon {
-      position: absolute;
-      top: 38px;
-      right: 0;
-      width: 270px;
-      max-width: 70vw;
-      background: #fff;
-      color: #333;
-      font-size: 1em;
-      border: 1.5px solid #e4007f;
-      border-radius: 7px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.16);
-      padding: 15px 14px 15px 18px;
-      z-index: 1004;
-      pointer-events: auto;
-      word-break: break-word;
-      line-height: 1.7;
-      display: none;
+      position: absolute; top: 38px; right: 0; width: 270px; max-width: 70vw; background: #fff; color: #333; font-size: 1em;
+      border: 1.5px solid #e4007f; border-radius: 7px; box-shadow: 0 2px 12px rgba(0,0,0,0.16);
+      padding: 15px 14px 15px 18px; z-index: 1004; pointer-events: auto; word-break: break-word; line-height: 1.7; display: none;
     }
     .custom-help-balloon:before {
-      content: "";
-      position: absolute;
-      top: -13px;
-      right: 20px;
-      border: 7px solid transparent;
-      border-bottom: 10px solid #e4007f;
+      content: ""; position: absolute; top: -13px; right: 20px;
+      border: 7px solid transparent; border-bottom: 10px solid #e4007f;
     }
     .custom-help-balloon:after {
-      content: "";
-      position: absolute;
-      top: -11px;
-      right: 22px;
-      border: 6px solid transparent;
-      border-bottom: 10px solid #fff;
+      content: ""; position: absolute; top: -11px; right: 22px;
+      border: 6px solid transparent; border-bottom: 10px solid #fff;
     }
     @media (max-width: 600px) {
-      #form {
-        padding: 6px 3vw 6px 3vw;
-        gap: 0.4rem;
-        font-size: 0.9em;
-      }
-      #form label {
-        min-width: 90px;
-        font-size: 0.95em;
-      }
-      #form input {
-        font-size: 0.93em;
-        min-width: 70px;
-      }
-      .custom-help-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 18px;
-        line-height: 24px;
-      }
-      .custom-help-balloon {
-        width: 90vw;
-        max-width: 95vw;
-        font-size: 0.98em;
-        right: 0;
-        top: 32px;
-        padding: 11px 8px 11px 13px;
-      }
-      .custom-help-balloon:before {
-        right: 16px;
-      }
-      .custom-help-balloon:after {
-        right: 18px;
-      }
+      #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
+      #form label { min-width: 90px; font-size: 0.95em; }
+      #form input { font-size: 0.93em; min-width: 70px; }
+      .custom-help-btn { width: 28px; height: 28px; font-size: 18px; line-height: 24px; }
+      .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
+      .custom-help-balloon:before { right: 16px; }
+      .custom-help-balloon:after { right: 18px; }
     }
     @media (max-width: 400px) {
-      #form label {
-        min-width: 70px;
-        font-size: 0.9em;
-      }
+      #form label { min-width: 70px; font-size: 0.9em; }
     }
   </style>
 </head>
@@ -222,12 +95,19 @@
       L.drawLocal.edit.toolbar.buttons.edit = '図形を編集';
       L.drawLocal.edit.toolbar.buttons.remove = '図形を削除';
     }
+
     // 地図初期化
     const map = L.map('map', { tap: false }).setView([35.6996, 139.7652], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
     const drawnItems = new L.FeatureGroup().addTo(map);
+
+    const polygonStyle = {
+      color: "#e4007f",
+      fillColor: "#e4007f",
+      fillOpacity: 0.4
+    };
 
     const drawControl = new L.Control.Draw({
       position: 'topleft',
@@ -236,11 +116,7 @@
         polygon: {
           allowIntersection: false,
           showArea: true,
-          shapeOptions: {
-            color: "#e4007f",
-            fillColor: "#e4007f",
-            fillOpacity: 0.4
-          },
+          shapeOptions: polygonStyle,
           icon: new L.DivIcon({
             iconSize: new L.Point(6, 6),
             className: 'leaflet-div-icon'
@@ -255,31 +131,98 @@
     });
     map.addControl(drawControl);
 
-fetch('http://localhost:3001/api/polygons')
-  .then(res => res.json())
-  .then(polygons => {
-    polygons.forEach(geojson => {
-      L.geoJSON(geojson).eachLayer(layer => {
-        drawnItems.addLayer(layer);
+    // ユーティリティ：情報バルーンと編集イベントをバインド
+    function bindPolygonInfo(layer, date, name) {
+      let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
+      layer.bindPopup(infoHtml);
+
+      // PC: hoverでshow、SP: タップでshow
+      if ('ontouchstart' in window) {
+        layer.on('click', function(e) {
+          layer.openPopup();
+        });
+      } else {
+        layer.on('mouseover', function(e) {
+          layer.openPopup();
+        });
+        layer.on('mouseout', function(e) {
+          layer.closePopup();
+        });
+      }
+    }
+
+    // ユーティリティ：編集モード起動イベント（PC:1クリック, SP:2連続タップ）
+    function bindPolygonEditEvent(layer) {
+      if ('ontouchstart' in window) {
+        // SP: 2連続タップで編集
+        let lastTap = 0;
+        layer.on('click', function(e) {
+          let now = Date.now();
+          if (now - lastTap < 400) {
+            // 編集モードON
+            if (drawControl._toolbars && drawControl._toolbars.edit && drawControl._toolbars.edit._modes.edit) {
+              drawControl._toolbars.edit._modes.edit.handler.enable();
+            }
+          }
+          lastTap = now;
+        });
+      } else {
+        // PC: 1クリックで編集
+        layer.on('click', function(e) {
+          if (drawControl._toolbars && drawControl._toolbars.edit && drawControl._toolbars.edit._modes.edit) {
+            drawControl._toolbars.edit._modes.edit.handler.enable();
+          }
+        });
+      }
+    }
+
+    // サーバーから既存ポリゴンを読み込み
+    fetch('http://localhost:3001/api/polygons')
+      .then(res => res.json())
+      .then(polygons => {
+        polygons.forEach(obj => {
+          // objがFeatureの場合、propertiesからdate/nameも取得
+          let geojson = obj;
+          let date = "", name = "";
+          // 互換性のため
+          if (geojson.properties) {
+            date = geojson.properties.date || "";
+            name = geojson.properties.name || "";
+          } else if (geojson.date || geojson.name) {
+            date = geojson.date || "";
+            name = geojson.name || "";
+          }
+          // もしプロパティが無い場合は空欄
+          L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
+            bindPolygonInfo(layer, date, name);
+            bindPolygonEditEvent(layer);
+            drawnItems.addLayer(layer);
+          });
+        });
+      })
+      .catch(err => {
+        console.error('既存ポリゴン取得失敗', err);
       });
-    });
-  })
-  .catch(err => {
-    console.error('既存ポリゴン取得失敗', err);
-  });
 
     // ポリゴン追加時
     map.on(L.Draw.Event.CREATED, function (e) {
       const layer = e.layer;
+      layer.setStyle && layer.setStyle(polygonStyle);
       drawnItems.addLayer(layer);
 
-      // サーバーに追加を通知
       const date = document.getElementById("date").value;
       const name = document.getElementById("name").value;
+
+      // 保存前にバルーン・編集イベントをバインド（保存失敗時は削除する）
+      bindPolygonInfo(layer, date, name);
+      bindPolygonEditEvent(layer);
+
       if (!date) {
         alert("実施日を入力してください");
+        drawnItems.removeLayer(layer);
         return;
       }
+      // サーバーに追加を通知
       fetch('http://localhost:3001/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -292,9 +235,11 @@ fetch('http://localhost:3001/api/polygons')
         .then(json => {
           if (json.status !== 'ok') {
             alert('保存に失敗しました: ' + (json.error || ''));
+            drawnItems.removeLayer(layer);
           }
         }).catch(() => {
           alert('サーバーに接続できませんでした');
+          drawnItems.removeLayer(layer);
         });
     });
 
