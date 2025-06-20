@@ -2,391 +2,41 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>一致団結ポスティングマップ</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ポリゴン表示サンプル</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
   <style>
-    html, body { height: 100%; margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: sans-serif; margin: 0; padding: 0; height: 100dvh; min-height: 100dvh; background: #fff; display: flex; flex-direction: column; }
-    h1 { background-color: #e4007f; color: white; padding: 12px 10px 10px 10px; margin: 0; font-size: 1.3em; letter-spacing: 0.05em; }
-    #form { padding: 10px; background-color: #f9f9f9; border-bottom: 1px solid #ccc; display: flex; gap: 1rem; align-items: center; font-size: 0.95em; flex-wrap: wrap; position: relative; z-index: 1002; }
-    #form label { display: flex; flex-direction: column; font-weight: bold; min-width: 120px; margin-bottom: 4px; font-size: 1em; cursor: pointer; }
-    #form input { margin-top: 4px; padding: 4px; font-size: 0.95em; border: 1px solid #ccc; border-radius: 4px; min-width: 90px; box-sizing: border-box; }
-    #map { flex: 1 1 auto; height: 70vh; width: 100%; min-height: 350px; max-height: 100dvh; z-index: 1; }
-    .leaflet-div-icon { width: 6px !important; height: 6px !important; margin-left: -3px !important; margin-top: -3px !important; border-radius: 3px !important; border: 2px solid #e4007f !important; background: #fff !important; }
-    .custom-help-container { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); z-index: 1003; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
-    .custom-help-btn { width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #e4007f; border: 2px solid #e4007f; font-size: 22px; font-weight: bold; text-align: center; line-height: 28px; box-shadow: 0 2px 6px rgba(60,64,67,0.12); cursor: pointer; user-select: none; pointer-events: auto; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
-    .custom-help-btn:active, .custom-help-btn:focus { background: #e4007f; color: #fff; }
-    .custom-help-balloon { position: absolute; top: 38px; right: 0; width: 270px; max-width: 70vw; background: #fff; color: #333; font-size: 1em; border: 1.5px solid #e4007f; border-radius: 7px; box-shadow: 0 2px 12px rgba(0,0,0,0.16); padding: 15px 14px 15px 18px; z-index: 1004; pointer-events: auto; word-break: break-word; line-height: 1.7; display: none; }
-    .custom-help-balloon:before { content: ""; position: absolute; top: -13px; right: 20px; border: 7px solid transparent; border-bottom: 10px solid #e4007f; }
-    .custom-help-balloon:after { content: ""; position: absolute; top: -11px; right: 22px; border: 6px solid transparent; border-bottom: 10px solid #fff; }
-    /* 吹き出し（popup）の閉じるボタン非表示 */
-    .leaflet-popup-close-button { display: none !important; }
-    /* 描画ボタンと同サイズのカスタムundoボタン */
-    .leaflet-draw-toolbar .leaflet-draw-undo {
-      width: 30px; height: 30px; margin: 7px 0 0 0; background: #fff;
-      border: 2px solid #666; border-radius: 4px; box-shadow: 0 1.5px 6px rgba(60,64,67,0.12);
-      display: flex; align-items: center; justify-content: center; cursor: pointer;
-    }
-    .leaflet-draw-toolbar .leaflet-draw-undo svg {
-      width: 20px; height: 20px; display: block;
-    }
-    .leaflet-draw-toolbar .leaflet-draw-undo:hover {
-      background: #eee;
-      border-color: #e4007f;
-    }
-    .leaflet-draw-toolbar .leaflet-draw-undo:active {
-      background: #e4007f;
-      border-color: #e4007f;
-    }
-    @media (max-width: 600px) {
-      #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
-      #form label { min-width: 90px; font-size: 0.95em; }
-      #form input { font-size: 0.93em; min-width: 70px; }
-      .custom-help-btn { width: 28px; height: 28px; font-size: 18px; line-height: 24px; }
-      .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
-      .custom-help-balloon:before { right: 16px; }
-      .custom-help-balloon:after { right: 18px; }
-      .leaflet-draw-toolbar .leaflet-draw-undo { width: 28px; height: 28px; }
-      .leaflet-draw-toolbar .leaflet-draw-undo svg { width: 17px; height: 17px; }
-    }
-    @media (max-width: 400px) {
-      #form label { min-width: 70px; font-size: 0.9em; }
-    }
-    .leaflet-draw-toolbar .leaflet-draw-edit-edit,
-    .leaflet-draw-toolbar .leaflet-draw-edit-remove { display: none !important; }
+    #map { height: 80vh; }
   </style>
 </head>
 <body>
-  <h1>一致団結ポスティングマップ</h1>
-  <div id="form">
-    <label for="date" id="date-label">実施日（必須）
-      <input type="date" id="date" required />
-    </label>
-    <label>名前（任意）
-      <input type="text" id="name" />
-    </label>
-    <div class="custom-help-container" id="customHelpContainer">
-      <button class="custom-help-btn" id="customHelpBtn" title="操作方法">？</button>
-      <div class="custom-help-balloon" id="customHelpBalloon">
-        ＜操作方法＞<br>
-        1. 実施日・名前を入力する<br>
-        2. サイドメニューから「ポリゴンを描画」を選択し、ポスティング実施エリアを囲うようにしてマーキングする<br>
-        <br>
-        修正は図形を1クリック（スマホは1タップ）、削除は2回クリック（スマホは2連続タップ）でできます。<br>
-        戻るボタンで一つ前の操作に戻せます。
-      </div>
-    </div>
-  </div>
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
   <script>
-    // 実施日のラベルをクリックでカレンダー起動
-    document.addEventListener('DOMContentLoaded', function() {
-      const dateLabel = document.getElementById('date-label');
-      const dateInput = document.getElementById('date');
-      dateLabel.addEventListener('click', function(e){
-        if (e.target !== dateInput) {
-          dateInput.focus();
-          dateInput.click();
-        }
-      });
-    });
-
-    // 日本語化
-    if (window.L && window.L.drawLocal) {
-      L.drawLocal.draw.toolbar.buttons.polygon = 'ポリゴンを描画';
-      L.drawLocal.draw.handlers.polygon.tooltip.start = 'クリックしてポリゴンの最初の点を指定';
-      L.drawLocal.draw.handlers.polygon.tooltip.cont = 'クリックしてポリゴンの次の点を指定';
-      L.drawLocal.draw.handlers.polygon.tooltip.end = '最初の点をクリックしてポリゴンを閉じる';
-      L.drawLocal.edit.toolbar.buttons.edit = '';
-      L.drawLocal.edit.toolbar.buttons.remove = '';
-    }
-
-    const map = L.map('map', { tap: false }).setView([35.6996, 139.7652], 13);
+    // 1. 地図初期化
+    const map = L.map('map').setView([35.6996, 139.7652], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
     const drawnItems = new L.FeatureGroup().addTo(map);
 
-    // ---- undo機能 ----
-    let undoStack = [];
-    function getCurrentState() {
-      let state = [];
-      drawnItems.eachLayer(layer => {
-        if (layer.toGeoJSON) state.push(layer.toGeoJSON());
-      });
-      return state;
-    }
-    async function pushUndo() {
-      undoStack.push(await getCurrentState());
-      if (undoStack.length > 20) undoStack.shift();
-    }
-    async function popUndo() {
-      if (undoStack.length === 0) return;
-      const prevState = undoStack.pop();
-
-      // 地図をクリアし、undo状態から復元
-      drawnItems.clearLayers();
-      prevState.forEach(geojson => {
-        L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
-          applyLayerBindings(layer, geojson);
-          drawnItems.addLayer(layer);
-        });
-      });
-
-      // サーバーに全件上書き
-      await fetch('http://localhost:3001/api/overwrite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ polygons: prevState })
-      });
-    }
-    // カスタムundoボタン（画像参照）
-    function addUndoButton() {
-      const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
-      if (!toolbar) return;
-      // すでに追加済みなら何もしない
-      if (toolbar.querySelector('.leaflet-draw-undo')) return;
-
-      const btn = document.createElement('a');
-      btn.className = 'leaflet-draw-draw-polyline leaflet-draw-undo';
-      btn.href = '#';
-      btn.title = '戻る';
-      btn.style.display = 'flex';
-      btn.innerHTML = `
-        <svg viewBox="0 0 24 24" style="display:block; margin:auto;"><path d="M12 5V2L7 7l5 5V8c3.31 0 6 2.69 6 6 0 1.37-.47 2.63-1.26 3.63l1.46 1.46A7.938 7.938 0 0 0 20 14c0-4.42-3.58-8-8-8z" fill="#444"/></svg>
-      `; // 画像に合わせたリロード風アイコン
-      btn.onclick = async function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        await popUndo();
-      };
-      // ポリゴン描画ボタンの下に挿入
-      let drawPolygonBtn = toolbar.querySelector('.leaflet-draw-draw-polygon');
-      if (drawPolygonBtn && drawPolygonBtn.nextSibling)
-        toolbar.insertBefore(btn, drawPolygonBtn.nextSibling);
-      else
-        toolbar.appendChild(btn);
-    }
-
-    // ---- drawControl ----
-    const polygonStyle = {
-      color: "#e4007f",
-      fillColor: "#e4007f",
-      fillOpacity: 0.4
-    };
-
-    // 編集・削除ボタンだけ消す。描画ボタンは残す
-    const drawControl = new L.Control.Draw({
-      position: 'topleft',
-      edit: { featureGroup: drawnItems, edit: false, remove: false },
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          showArea: true,
-          shapeOptions: polygonStyle,
-          icon: new L.DivIcon({
-            iconSize: new L.Point(6, 6),
-            className: 'leaflet-div-icon'
-          })
-        },
-        polyline: false,
-        rectangle: false,
-        circle: false,
-        marker: false,
-        circlemarker: false
-      }
-    });
-    map.addControl(drawControl);
-
-    // 描画ボタンUI生成後にundoボタン挿入
-    setTimeout(addUndoButton, 500);
-
-    // ---- ポリゴン吹き出し・編集・削除 ----
-    const editLayerGroup = new L.FeatureGroup();
-    map.addLayer(editLayerGroup);
-    let editHandler = null;
-    let editingLayer = null;
-
-    function bindPolygonInfo(layer, date, name) {
-      let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
-      layer.bindPopup(infoHtml, { closeButton: false });
-      if ('ontouchstart' in window) {
-        layer.on('click', function(e) { layer.openPopup(); });
-      } else {
-        layer.on('mouseover', function(e) { layer.openPopup(); });
-        layer.on('mouseout', function(e) { layer.closePopup(); });
-      }
-    }
-    function applyLayerBindings(layer, geojson) {
-      const date = geojson.properties && geojson.properties.date;
-      const name = geojson.properties && geojson.properties.name;
-      const id = geojson.properties && geojson.properties.id;
-      bindPolygonInfo(layer, date, name);
-      bindPolygonEditEvent(layer, id);
-      bindPolygonDeleteEvent(layer, id);
-    }
-    function bindPolygonEditEvent(layer, id) {
-      layer.on('click', function(e) {
-        if (editingLayer === layer) return;
-        if (editHandler) { editHandler.disable(); }
-        editLayerGroup.clearLayers();
-        editingLayer = layer;
-        editLayerGroup.addLayer(layer);
-        editHandler = new L.EditToolbar.Edit(map, { featureGroup: editLayerGroup });
-        editHandler.enable();
-        map.once('click', async function(ev) {
-          if (editHandler) {
-            editHandler.disable();
-            editLayerGroup.clearLayers();
-            if (layer.toGeoJSON) {
-              const geojson = layer.toGeoJSON();
-              const date = geojson.properties && geojson.properties.date || document.getElementById('date').value;
-              const name = geojson.properties && geojson.properties.name || document.getElementById('name').value;
-              await fetch('http://localhost:3001/api/update', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  id: id,
-                  date,
-                  name,
-                  polygon: geojson
-                })
-              });
-            }
-            editingLayer = null;
-          }
-        });
-      });
-    }
-    function bindPolygonDeleteEvent(layer, id) {
-      let lastTap = 0, tapCount = 0;
-      const isTouch = 'ontouchstart' in window;
-      if (isTouch) {
-        layer.on('click', function(e) {
-          const now = Date.now();
-          tapCount = (now - lastTap < 400) ? tapCount + 1 : 1;
-          lastTap = now;
-          if (tapCount === 2) {
-            tapCount = 0;
-            if (confirm('本当に削除しますか？')) {
-              fetch('http://localhost:3001/api/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: id })
-              }).then(res => res.json())
-                .then(json => {
-                  if (json.status === 'ok') drawnItems.removeLayer(layer);
-                });
-            }
-          }
-        });
-      } else {
-        layer.on('dblclick', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (confirm('本当に削除しますか？')) {
-            fetch('http://localhost:3001/api/delete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: id })
-            }).then(res => res.json())
-              .then(json => {
-                if (json.status === 'ok') drawnItems.removeLayer(layer);
-              });
-          }
-        });
-      }
-    }
-
-    // ---- ポリゴンデータのロード・保存 ----
-    fetch('http://localhost:3001/api/polygons')
-      .then(res => res.json())
-      .then(polygons => {
-        drawnItems.clearLayers();
-        polygons.forEach(geojson => {
-          L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
-            applyLayerBindings(layer, geojson);
-            drawnItems.addLayer(layer);
+    // 2. ページ読み込み時にAPIからポリゴン一覧取得・表示
+    window.addEventListener('DOMContentLoaded', function() {
+      fetch('http://localhost:3001/api/polygons')
+        .then(res => res.json())
+        .then(polygons => {
+          // polygonsはGeoJSONの配列
+          drawnItems.clearLayers();
+          polygons.forEach(geojson => {
+            L.geoJSON(geojson).eachLayer(layer => {
+              drawnItems.addLayer(layer);
+            });
           });
-        });
-        pushUndo();
-      });
-
-    map.on(L.Draw.Event.CREATED, function (e) {
-      pushUndo();
-      const layer = e.layer;
-      layer.setStyle && layer.setStyle(polygonStyle);
-      drawnItems.addLayer(layer);
-      const date = document.getElementById("date").value;
-      const name = document.getElementById("name").value;
-      if (!date) {
-        alert("実施日を入力してください");
-        drawnItems.removeLayer(layer);
-        return;
-      }
-      fetch('http://localhost:3001/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date,
-          name,
-          polygon: layer.toGeoJSON()
         })
-      }).then(res => res.json())
-        .then(json => {
-          if (json.status === 'ok' && json.id) {
-            layer.feature = layer.feature || {};
-            layer.feature.properties = layer.feature.properties || {};
-            layer.feature.properties.id = json.id;
-            layer.feature.properties.date = date;
-            layer.feature.properties.name = name;
-            applyLayerBindings(layer, { properties: { id: json.id, date, name } });
-          } else {
-            alert('保存に失敗しました: ' + (json.error || ''));
-            drawnItems.removeLayer(layer);
-          }
+        .catch(err => {
+          console.error('ポリゴン取得エラー', err);
         });
-    });
-
-    map.on('draw:edited', function (e) {
-      pushUndo();
-      e.layers.eachLayer(function (layer) {
-        let geojson = layer.toGeoJSON();
-        let id = geojson.properties && geojson.properties.id;
-        const date = geojson.properties && geojson.properties.date || document.getElementById("date").value;
-        const name = geojson.properties && geojson.properties.name || document.getElementById("name").value;
-        fetch('http://localhost:3001/api/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: id,
-            date,
-            name,
-            polygon: geojson
-          })
-        });
-      });
-    });
-
-    // ヘルプボタンのふきだし表示制御
-    const helpBtn = document.getElementById('customHelpBtn');
-    const helpBalloon = document.getElementById('customHelpBalloon');
-    let helpOpen = false;
-    function toggleHelpBalloon(e) {
-      e.stopPropagation();
-      helpOpen = !helpOpen;
-      helpBalloon.style.display = helpOpen ? 'block' : 'none';
-    }
-    helpBtn.addEventListener('click', toggleHelpBalloon);
-    document.addEventListener('click', function(e) {
-      if (helpOpen && !helpBtn.contains(e.target) && !helpBalloon.contains(e.target)) {
-        helpBalloon.style.display = 'none';
-        helpOpen = false;
-      }
     });
   </script>
 </body>
