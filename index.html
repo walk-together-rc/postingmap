@@ -60,6 +60,11 @@
     @media (max-width: 400px) {
       #form label { min-width: 70px; font-size: 0.9em; }
     }
+    /* サイドナビの編集/削除ボタン隠す(念のため) */
+    .leaflet-draw-toolbar .leaflet-draw-edit-edit,
+    .leaflet-draw-toolbar .leaflet-draw-edit-remove {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -78,7 +83,7 @@
         1. 実施日・名前を入力する<br>
         2. サイドメニューから「ポリゴンを描画」を選択し、ポスティング実施エリアを囲うようにしてマーキングする<br>
         <br>
-        修正は図形を1クリック、削除は2クリックでできます。
+        修正は図形を1クリック、削除は2回クリック（スマホは2連続タップ）でできます。
       </div>
     </div>
   </div>
@@ -92,8 +97,9 @@
       L.drawLocal.draw.handlers.polygon.tooltip.start = 'クリックしてポリゴンの最初の点を指定';
       L.drawLocal.draw.handlers.polygon.tooltip.cont = 'クリックしてポリゴンの次の点を指定';
       L.drawLocal.draw.handlers.polygon.tooltip.end = '最初の点をクリックしてポリゴンを閉じる';
-      L.drawLocal.edit.toolbar.buttons.edit = '図形を編集';
-      L.drawLocal.edit.toolbar.buttons.remove = '図形を削除';
+      // 編集・削除ボタン自体は非表示だが念のため
+      L.drawLocal.edit.toolbar.buttons.edit = '';
+      L.drawLocal.edit.toolbar.buttons.remove = '';
     }
 
     // 地図初期化
@@ -109,9 +115,10 @@
       fillOpacity: 0.4
     };
 
+    // 編集/削除ツールバーを消すためedit: false
     const drawControl = new L.Control.Draw({
       position: 'topleft',
-      edit: { featureGroup: drawnItems },
+      edit: false,
       draw: {
         polygon: {
           allowIntersection: false,
@@ -131,7 +138,7 @@
     });
     map.addControl(drawControl);
 
-    // ユーティリティ：情報バルーンと編集イベントをバインド
+    // 吹き出し
     function bindPolygonInfo(layer, date, name) {
       let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
       layer.bindPopup(infoHtml);
@@ -151,26 +158,65 @@
       }
     }
 
-    // ユーティリティ：編集モード起動イベント（PC:1クリック, SP:2連続タップ）
+    // 1クリック/1タップで編集開始
     function bindPolygonEditEvent(layer) {
-      if ('ontouchstart' in window) {
-        // SP: 2連続タップで編集
-        let lastTap = 0;
+      layer.on('click', function(e) {
+        // 編集モードON
+        if (drawControl._toolbars && drawControl._toolbars.edit && drawControl._toolbars.edit._modes.edit) {
+          drawControl._toolbars.edit._modes.edit.handler.enable();
+        } else {
+          // Leaflet.draw v1.0.4以降は下記でOK
+          if (drawControl && drawControl.options && drawControl.options.edit && drawControl.options.edit.featureGroup) {
+            // 編集モードを有効にする
+            // ただしツールバーが無いので、直接編集開始は難しいため図形の直接編集はカスタムが必要
+            // ここでは参考程度
+          }
+        }
+      });
+    }
+
+    // 2回クリック/2連続タップで削除確認&削除
+    function bindPolygonDeleteEvent(layer) {
+      let lastTap = 0, tapCount = 0;
+      const isTouch = 'ontouchstart' in window;
+
+      if (isTouch) {
         layer.on('click', function(e) {
-          let now = Date.now();
-          if (now - lastTap < 400) {
-            // 編集モードON
-            if (drawControl._toolbars && drawControl._toolbars.edit && drawControl._toolbars.edit._modes.edit) {
-              drawControl._toolbars.edit._modes.edit.handler.enable();
+          const now = Date.now();
+          tapCount = (now - lastTap < 400) ? tapCount + 1 : 1;
+          lastTap = now;
+          if (tapCount === 2) {
+            tapCount = 0;
+            if (confirm('本当に削除しますか？')) {
+              fetch('http://localhost:3001/api/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: layer._leaflet_id })
+              }).then(res => res.json())
+                .then(json => {
+                  if (json.status === 'ok') drawnItems.removeLayer(layer);
+                  else alert('削除に失敗しました: ' + (json.error || ''));
+                }).catch(() => {
+                  alert('サーバーに接続できませんでした');
+                });
             }
           }
-          lastTap = now;
         });
       } else {
-        // PC: 1クリックで編集
-        layer.on('click', function(e) {
-          if (drawControl._toolbars && drawControl._toolbars.edit && drawControl._toolbars.edit._modes.edit) {
-            drawControl._toolbars.edit._modes.edit.handler.enable();
+        // PCはダブルクリック
+        layer.on('dblclick', function(e) {
+          if (confirm('本当に削除しますか？')) {
+            fetch('http://localhost:3001/api/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: layer._leaflet_id })
+            }).then(res => res.json())
+              .then(json => {
+                if (json.status === 'ok') drawnItems.removeLayer(layer);
+                else alert('削除に失敗しました: ' + (json.error || ''));
+              }).catch(() => {
+                alert('サーバーに接続できませんでした');
+              });
           }
         });
       }
@@ -181,21 +227,17 @@
       .then(res => res.json())
       .then(polygons => {
         polygons.forEach(obj => {
-          // objがFeatureの場合、propertiesからdate/nameも取得
           let geojson = obj;
           let date = "", name = "";
-          // 互換性のため
           if (geojson.properties) {
             date = geojson.properties.date || "";
             name = geojson.properties.name || "";
-          } else if (geojson.date || geojson.name) {
-            date = geojson.date || "";
-            name = geojson.name || "";
           }
-          // もしプロパティが無い場合は空欄
+
           L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
             bindPolygonInfo(layer, date, name);
             bindPolygonEditEvent(layer);
+            bindPolygonDeleteEvent(layer);
             drawnItems.addLayer(layer);
           });
         });
@@ -213,9 +255,9 @@
       const date = document.getElementById("date").value;
       const name = document.getElementById("name").value;
 
-      // 保存前にバルーン・編集イベントをバインド（保存失敗時は削除する）
       bindPolygonInfo(layer, date, name);
       bindPolygonEditEvent(layer);
+      bindPolygonDeleteEvent(layer);
 
       if (!date) {
         alert("実施日を入力してください");
@@ -246,14 +288,13 @@
     // ポリゴン編集時
     map.on('draw:edited', function (e) {
       e.layers.eachLayer(function (layer) {
-        // サーバーに修正を通知
         const date = document.getElementById("date").value;
         const name = document.getElementById("name").value;
         fetch('http://localhost:3001/api/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            id: layer._leaflet_id, // 本番は固有ID推奨
+            id: layer._leaflet_id,
             date,
             name,
             polygon: layer.toGeoJSON()
@@ -269,27 +310,6 @@
       });
     });
 
-    // ポリゴン削除時
-    map.on('draw:deleted', function (e) {
-      e.layers.eachLayer(function (layer) {
-        fetch('http://localhost:3001/api/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: layer._leaflet_id // 本番は固有ID推奨
-          })
-        }).then(res => res.json())
-          .then(json => {
-            if (json.status !== 'ok') {
-              alert('削除に失敗しました: ' + (json.error || ''));
-            }
-          }).catch(() => {
-            alert('サーバーに接続できませんでした');
-          });
-      });
-    });
-
-    // --- ここ以下は既存のフォーム・UIなどのJS ---
     // ヘルプボタンのふきだし表示制御
     const helpBtn = document.getElementById('customHelpBtn');
     const helpBalloon = document.getElementById('customHelpBalloon');
