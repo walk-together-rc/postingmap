@@ -22,7 +22,6 @@
     .custom-help-balloon:before { content: ""; position: absolute; top: -13px; right: 20px; border: 7px solid transparent; border-bottom: 10px solid #e4007f; }
     .custom-help-balloon:after { content: ""; position: absolute; top: -11px; right: 22px; border: 6px solid transparent; border-bottom: 10px solid #fff; }
     .leaflet-popup-close-button { display: none !important; }
-    /* 描画ボタンと同サイズのカスタム削除ボタン */
     .leaflet-draw-toolbar .leaflet-draw-remove {
       width: 30px; height: 30px; margin: 7px 0 0 0; background: #fff;
       border: 2px solid #666; border-radius: 4px; box-shadow: 0 1.5px 6px rgba(60,64,67,0.12);
@@ -72,8 +71,11 @@
         1. 実施日・名前を入力する<br>
         2. サイドメニューから「ポリゴンを描画」を選択し、ポスティング実施エリアを囲うようにしてマーキングする<br>
         <br>
-        図形の編集は、図形選択→自由に変形→図形以外をタップの手順で行います。<br>
-        図形の削除は、削除ボタン→図形選択→保存ボタンの手順で行います。
+        ■図形の編集<br>
+        図形選択→自由に変形→図形以外をタップ<br>
+        <br>
+        ■図形の削除<br>
+        削除ボタン→図形選択→Saveボタン
       </div>
     </div>
   </div>
@@ -270,6 +272,31 @@
           })
         });
       });
+    });
+
+    // 削除イベント（draw:deleted）でサーバー側も更新
+    map.on('draw:deleted', function (e) {
+      let deletePromises = [];
+      e.layers.eachLayer(function (layer) {
+        let geojson = layer.toGeoJSON();
+        let id = geojson.properties && geojson.properties.id;
+        if (id) {
+          // サーバーへ削除リクエスト
+          deletePromises.push(
+            fetch('http://localhost:3001/api/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: id })
+            })
+          );
+        }
+      });
+      // Promise.allでエラー確認もできる
+      Promise.all(deletePromises)
+        .then(() => {})
+        .catch(err => {
+          alert('削除処理でエラーが発生しました');
+        });
     });
 
     // ヘルプボタンのふきだし表示制御
