@@ -21,4 +21,368 @@
     .custom-help-btn:active, .custom-help-btn:focus { background: #e4007f; color: #fff; }
     .custom-help-balloon { position: absolute; top: 38px; right: 0; width: 270px; max-width: 70vw; background: #fff; color: #333; font-size: 1em; border: 1.5px solid #e4007f; border-radius: 7px; box-shadow: 0 2px 12px rgba(0,0,0,0.16); padding: 15px 14px 15px 18px; z-index: 1004; pointer-events: auto; word-break: break-word; line-height: 1.7; display: none; }
     .custom-help-balloon:before { content: ""; position: absolute; top: -13px; right: 20px; border: 7px solid transparent; border-bottom: 10px solid #e4007f; }
-    .custom-help-balloon:after { content: ""; position: absolute; top: -11px; right: 22px; border: 6px solid
+    .custom-help-balloon:after { content: ""; position: absolute; top: -11px; right: 22px; border: 6px solid transparent; border-bottom: 10px solid #fff; }
+    /* 吹き出し（popup）の閉じるボタン非表示 */
+    .leaflet-popup-close-button { display: none !important; }
+    @media (max-width: 600px) {
+      #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
+      #form label { min-width: 90px; font-size: 0.95em; }
+      #form input { font-size: 0.93em; min-width: 70px; }
+      .custom-help-btn { width: 28px; height: 28px; font-size: 18px; line-height: 24px; }
+      .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
+      .custom-help-balloon:before { right: 16px; }
+      .custom-help-balloon:after { right: 18px; }
+    }
+    @media (max-width: 400px) {
+      #form label { min-width: 70px; font-size: 0.9em; }
+    }
+    .leaflet-draw-toolbar .leaflet-draw-edit-edit,
+    .leaflet-draw-toolbar .leaflet-draw-edit-remove { display: none !important; }
+    .custom-undo-btn {
+      background: #fff; color: #e4007f; border: 2px solid #e4007f;
+      border-radius: 5px; padding: 4px 14px; margin-top: 7px;
+      font-size: 16px; font-weight: bold; cursor: pointer; display: block;
+      transition: background 0.15s, color 0.15s;
+      box-shadow: 0 1px 3px rgba(60,64,67,0.13);
+    }
+    .custom-undo-btn:active, .custom-undo-btn:focus {
+      background: #e4007f;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <h1>一致団結ポスティングマップ</h1>
+  <div id="form">
+    <label for="date" id="date-label">実施日（必須）
+      <input type="date" id="date" required />
+    </label>
+    <label>名前（任意）
+      <input type="text" id="name" />
+    </label>
+    <div class="custom-help-container" id="customHelpContainer">
+      <button class="custom-help-btn" id="customHelpBtn" title="操作方法">？</button>
+      <div class="custom-help-balloon" id="customHelpBalloon">
+        ＜操作方法＞<br>
+        1. 実施日・名前を入力する<br>
+        2. サイドメニューから「ポリゴンを描画」を選択し、ポスティング実施エリアを囲うようにしてマーキングする<br>
+        <br>
+        修正は図形を1クリック（スマホは1タップ）、削除は2回クリック（スマホは2連続タップ）でできます。<br>
+        戻るボタンで一つ前の操作に戻せます。
+      </div>
+    </div>
+  </div>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+  <script>
+    // 実施日のラベルをクリックでカレンダー起動
+    document.addEventListener('DOMContentLoaded', function() {
+      const dateLabel = document.getElementById('date-label');
+      const dateInput = document.getElementById('date');
+      dateLabel.addEventListener('click', function(e){
+        if (e.target !== dateInput) {
+          dateInput.focus();
+          dateInput.click();
+        }
+      });
+    });
+
+    // 日本語化
+    if (window.L && window.L.drawLocal) {
+      L.drawLocal.draw.toolbar.buttons.polygon = 'ポリゴンを描画';
+      L.drawLocal.draw.handlers.polygon.tooltip.start = 'クリックしてポリゴンの最初の点を指定';
+      L.drawLocal.draw.handlers.polygon.tooltip.cont = 'クリックしてポリゴンの次の点を指定';
+      L.drawLocal.draw.handlers.polygon.tooltip.end = '最初の点をクリックしてポリゴンを閉じる';
+      L.drawLocal.edit.toolbar.buttons.edit = '';
+      L.drawLocal.edit.toolbar.buttons.remove = '';
+    }
+
+    const map = L.map('map', { tap: false }).setView([35.6996, 139.7652], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    const drawnItems = new L.FeatureGroup().addTo(map);
+
+    // ---- undo機能 ----
+    let undoStack = [];
+    function pushUndo() {
+      let state = [];
+      drawnItems.eachLayer(layer => {
+        if (layer.toGeoJSON) state.push(layer.toGeoJSON());
+      });
+      undoStack.push(state);
+      if (undoStack.length > 20) undoStack.shift();
+    }
+    function popUndo() {
+      if (undoStack.length === 0) return;
+      const prevState = undoStack.pop();
+      drawnItems.clearLayers();
+      prevState.forEach(geojson => {
+        L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
+          applyLayerBindings(layer, geojson);
+          drawnItems.addLayer(layer);
+        });
+      });
+    }
+    // カスタム「戻る」ボタン
+    L.Control.CustomUndo = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function(map) {
+        var div = L.DomUtil.create('div', 'leaflet-control custom-undo-container');
+        var btn = L.DomUtil.create('button', 'custom-undo-btn', div);
+        btn.innerText = '戻る';
+        btn.title = 'ひとつ前の操作に戻る';
+        btn.onclick = function(e) {
+          e.stopPropagation();
+          popUndo();
+        };
+        L.DomEvent.disableClickPropagation(div);
+        return div;
+      },
+      onRemove: function(map) {}
+    });
+
+    // ---- drawControl ----
+    const polygonStyle = {
+      color: "#e4007f",
+      fillColor: "#e4007f",
+      fillOpacity: 0.4
+    };
+
+    // 編集・削除ボタンだけ消す。描画ボタンは残す
+    const drawControl = new L.Control.Draw({
+      position: 'topleft',
+      edit: { featureGroup: drawnItems, edit: false, remove: false },
+      draw: {
+        polygon: {
+          allowIntersection: false,
+          showArea: true,
+          shapeOptions: polygonStyle,
+          icon: new L.DivIcon({
+            iconSize: new L.Point(6, 6),
+            className: 'leaflet-div-icon'
+          })
+        },
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+        circlemarker: false
+      }
+    });
+    map.addControl(drawControl);
+
+    // 戻るボタンを追加
+    map.addControl(new L.Control.CustomUndo());
+
+    // ---- ポリゴン吹き出し・編集・削除 ----
+    const editLayerGroup = new L.FeatureGroup();
+    map.addLayer(editLayerGroup);
+    let editHandler = null;
+    let editingLayer = null;
+
+    function bindPolygonInfo(layer, date, name) {
+      let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
+      layer.bindPopup(infoHtml, { closeButton: false });
+      if ('ontouchstart' in window) {
+        layer.on('click', function(e) { layer.openPopup(); });
+      } else {
+        layer.on('mouseover', function(e) { layer.openPopup(); });
+        layer.on('mouseout', function(e) { layer.closePopup(); });
+      }
+    }
+    function applyLayerBindings(layer, geojson) {
+      const date = geojson.properties && geojson.properties.date;
+      const name = geojson.properties && geojson.properties.name;
+      const id = geojson.properties && geojson.properties.id;
+      bindPolygonInfo(layer, date, name);
+      bindPolygonEditEvent(layer, id);
+      bindPolygonDeleteEvent(layer, id);
+    }
+    function bindPolygonEditEvent(layer, id) {
+      layer.on('click', function(e) {
+        if (editingLayer === layer) return;
+        if (editHandler) { editHandler.disable(); }
+        editLayerGroup.clearLayers();
+        editingLayer = layer;
+        editLayerGroup.addLayer(layer);
+        editHandler = new L.EditToolbar.Edit(map, { featureGroup: editLayerGroup });
+        editHandler.enable();
+        map.once('click', function(ev) {
+          if (editHandler) {
+            editHandler.disable();
+            editLayerGroup.clearLayers();
+            if (layer.toGeoJSON) {
+              const geojson = layer.toGeoJSON();
+              const date = geojson.properties && geojson.properties.date || document.getElementById('date').value;
+              const name = geojson.properties && geojson.properties.name || document.getElementById('name').value;
+              fetch('http://localhost:3001/api/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: id,
+                  date,
+                  name,
+                  polygon: geojson
+                })
+              }).then(res => res.json())
+                .then(json => {
+                  if (json.status !== 'ok') {
+                    alert('修正に失敗しました: ' + (json.error || ''));
+                  }
+                }).catch(() => {
+                  alert('サーバーに接続できませんでした');
+                });
+            }
+            editingLayer = null;
+          }
+        });
+      });
+    }
+    function bindPolygonDeleteEvent(layer, id) {
+      let lastTap = 0, tapCount = 0;
+      const isTouch = 'ontouchstart' in window;
+      if (isTouch) {
+        layer.on('click', function(e) {
+          const now = Date.now();
+          tapCount = (now - lastTap < 400) ? tapCount + 1 : 1;
+          lastTap = now;
+          if (tapCount === 2) {
+            tapCount = 0;
+            if (confirm('本当に削除しますか？')) {
+              fetch('http://localhost:3001/api/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+              }).then(res => res.json())
+                .then(json => {
+                  if (json.status === 'ok') drawnItems.removeLayer(layer);
+                  else alert('削除に失敗しました: ' + (json.error || ''));
+                }).catch(() => {
+                  alert('サーバーに接続できませんでした');
+                });
+            }
+          }
+        });
+      } else {
+        layer.on('dblclick', function(e) {
+          if (confirm('本当に削除しますか？')) {
+            fetch('http://localhost:3001/api/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: id })
+            }).then(res => res.json())
+              .then(json => {
+                if (json.status === 'ok') drawnItems.removeLayer(layer);
+                else alert('削除に失敗しました: ' + (json.error || ''));
+              }).catch(() => {
+                alert('サーバーに接続できませんでした');
+              });
+          }
+        });
+      }
+    }
+
+    // ---- ポリゴンデータのロード・保存 ----
+    fetch('http://localhost:3001/api/polygons')
+      .then(res => res.json())
+      .then(polygons => {
+        drawnItems.clearLayers();
+        polygons.forEach(geojson => {
+          L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
+            applyLayerBindings(layer, geojson);
+            drawnItems.addLayer(layer);
+          });
+        });
+        pushUndo();
+      })
+      .catch(err => {
+        console.error('既存ポリゴン取得失敗', err);
+      });
+
+    map.on(L.Draw.Event.CREATED, function (e) {
+      pushUndo();
+      const layer = e.layer;
+      layer.setStyle && layer.setStyle(polygonStyle);
+      drawnItems.addLayer(layer);
+      const date = document.getElementById("date").value;
+      const name = document.getElementById("name").value;
+      if (!date) {
+        alert("実施日を入力してください");
+        drawnItems.removeLayer(layer);
+        return;
+      }
+      fetch('http://localhost:3001/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date,
+          name,
+          polygon: layer.toGeoJSON()
+        })
+      }).then(res => res.json())
+        .then(json => {
+          if (json.status === 'ok' && json.id) {
+            layer.feature = layer.feature || {};
+            layer.feature.properties = layer.feature.properties || {};
+            layer.feature.properties.id = json.id;
+            layer.feature.properties.date = date;
+            layer.feature.properties.name = name;
+            applyLayerBindings(layer, { properties: { id: json.id, date, name } });
+          } else {
+            alert('保存に失敗しました: ' + (json.error || ''));
+            drawnItems.removeLayer(layer);
+          }
+        }).catch(() => {
+          alert('サーバーに接続できませんでした');
+          drawnItems.removeLayer(layer);
+        });
+    });
+
+    map.on('draw:edited', function (e) {
+      pushUndo();
+      e.layers.eachLayer(function (layer) {
+        let geojson = layer.toGeoJSON();
+        let id = geojson.properties && geojson.properties.id;
+        const date = geojson.properties && geojson.properties.date || document.getElementById("date").value;
+        const name = geojson.properties && geojson.properties.name || document.getElementById("name").value;
+        fetch('http://localhost:3001/api/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: id,
+            date,
+            name,
+            polygon: geojson
+          })
+        }).then(res => res.json())
+          .then(json => {
+            if (json.status !== 'ok') {
+              alert('修正に失敗しました: ' + (json.error || ''));
+            }
+          }).catch(() => {
+            alert('サーバーに接続できませんでした');
+          });
+      });
+    });
+
+    // ヘルプボタンのふきだし表示制御
+    const helpBtn = document.getElementById('customHelpBtn');
+    const helpBalloon = document.getElementById('customHelpBalloon');
+    let helpOpen = false;
+    function toggleHelpBalloon(e) {
+      e.stopPropagation();
+      helpOpen = !helpOpen;
+      helpBalloon.style.display = helpOpen ? 'block' : 'none';
+    }
+    helpBtn.addEventListener('click', toggleHelpBalloon);
+    document.addEventListener('click', function(e) {
+      if (helpOpen && !helpBtn.contains(e.target) && !helpBalloon.contains(e.target)) {
+        helpBalloon.style.display = 'none';
+        helpOpen = false;
+      }
+    });
+  </script>
+</body>
+</html>
