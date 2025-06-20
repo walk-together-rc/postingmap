@@ -22,20 +22,20 @@
     .custom-help-balloon:before { content: ""; position: absolute; top: -13px; right: 20px; border: 7px solid transparent; border-bottom: 10px solid #e4007f; }
     .custom-help-balloon:after { content: ""; position: absolute; top: -11px; right: 22px; border: 6px solid transparent; border-bottom: 10px solid #fff; }
     .leaflet-popup-close-button { display: none !important; }
-    /* 描画ボタンと同サイズのカスタムundoボタン */
-    .leaflet-draw-toolbar .leaflet-draw-undo {
+    /* 描画ボタンと同サイズのカスタム削除ボタン */
+    .leaflet-draw-toolbar .leaflet-draw-remove {
       width: 30px; height: 30px; margin: 7px 0 0 0; background: #fff;
       border: 2px solid #666; border-radius: 4px; box-shadow: 0 1.5px 6px rgba(60,64,67,0.12);
       display: flex; align-items: center; justify-content: center; cursor: pointer;
     }
-    .leaflet-draw-toolbar .leaflet-draw-undo svg {
+    .leaflet-draw-toolbar .leaflet-draw-remove svg {
       width: 20px; height: 20px; display: block;
     }
-    .leaflet-draw-toolbar .leaflet-draw-undo:hover {
+    .leaflet-draw-toolbar .leaflet-draw-remove:hover {
       background: #eee;
       border-color: #e4007f;
     }
-    .leaflet-draw-toolbar .leaflet-draw-undo:active {
+    .leaflet-draw-toolbar .leaflet-draw-remove:active {
       background: #e4007f;
       border-color: #e4007f;
     }
@@ -47,14 +47,13 @@
       .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
       .custom-help-balloon:before { right: 16px; }
       .custom-help-balloon:after { right: 18px; }
-      .leaflet-draw-toolbar .leaflet-draw-undo { width: 28px; height: 28px; }
-      .leaflet-draw-toolbar .leaflet-draw-undo svg { width: 17px; height: 17px; }
+      .leaflet-draw-toolbar .leaflet-draw-remove { width: 28px; height: 28px; }
+      .leaflet-draw-toolbar .leaflet-draw-remove svg { width: 17px; height: 17px; }
     }
     @media (max-width: 400px) {
       #form label { min-width: 70px; font-size: 0.9em; }
     }
-    .leaflet-draw-toolbar .leaflet-draw-edit-edit,
-    .leaflet-draw-toolbar .leaflet-draw-edit-remove { display: none !important; }
+    .leaflet-draw-toolbar .leaflet-draw-edit-edit { display: none !important; }
   </style>
 </head>
 <body>
@@ -73,8 +72,8 @@
         1. 実施日・名前を入力する<br>
         2. サイドメニューから「ポリゴンを描画」を選択し、ポスティング実施エリアを囲うようにしてマーキングする<br>
         <br>
-        修正は図形を1クリック（スマホは1タップ）、削除は2回クリック（スマホは2連続タップ）でできます。<br>
-        戻るボタンで一つ前の操作に戻せます。
+        図形の編集は、図形選択→自由に変形→図形以外をタップの手順で行います。<br>
+        図形の削除は、削除ボタン→図形選択→保存ボタンの手順で行います。
       </div>
     </div>
   </div>
@@ -85,11 +84,10 @@
     // 日本語化
     if (window.L && window.L.drawLocal) {
       L.drawLocal.draw.toolbar.buttons.polygon = 'ポリゴンを描画';
-      L.drawLocal.draw.handlers.polygon.tooltip.start = 'クリックしてポリゴンの最初の点を指定';
-      L.drawLocal.draw.handlers.polygon.tooltip.cont = 'クリックしてポリゴンの次の点を指定';
-      L.drawLocal.draw.handlers.polygon.tooltip.end = '最初の点をクリックしてポリゴンを閉じる';
       L.drawLocal.edit.toolbar.buttons.edit = '';
-      L.drawLocal.edit.toolbar.buttons.remove = '';
+      L.drawLocal.edit.toolbar.buttons.remove = '削除';
+      L.drawLocal.edit.handlers.remove.tooltip.text = '削除したいポリゴンをクリックしてください';
+      L.drawLocal.edit.handlers.remove.tooltip.subtext = 'もう一度クリックで削除を解除';
     }
 
     // 地図初期化
@@ -99,60 +97,6 @@
     }).addTo(map);
     const drawnItems = new L.FeatureGroup().addTo(map);
 
-    // undo機能
-    let undoStack = [];
-    function getCurrentState() {
-      let state = [];
-      drawnItems.eachLayer(layer => {
-        if (layer.toGeoJSON) state.push(layer.toGeoJSON());
-      });
-      return state;
-    }
-    async function pushUndo() {
-      undoStack.push(await getCurrentState());
-      if (undoStack.length > 20) undoStack.shift();
-    }
-    async function popUndo() {
-      if (undoStack.length === 0) return;
-      const prevState = undoStack.pop();
-      drawnItems.clearLayers();
-      prevState.forEach(geojson => {
-        L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
-          applyLayerBindings(layer, geojson);
-          drawnItems.addLayer(layer);
-        });
-      });
-      await fetch('http://localhost:3001/api/overwrite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ polygons: prevState })
-      });
-    }
-    // undoボタン追加
-    function addUndoButton() {
-      const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
-      if (!toolbar) return;
-      if (toolbar.querySelector('.leaflet-draw-undo')) return;
-      const btn = document.createElement('a');
-      btn.className = 'leaflet-draw-draw-polyline leaflet-draw-undo';
-      btn.href = '#';
-      btn.title = '戻る';
-      btn.style.display = 'flex';
-      btn.innerHTML = `
-        <svg viewBox="0 0 24 24"><path d="M12 5V2L7 7l5 5V8c3.31 0 6 2.69 6 6 0 1.37-.47 2.63-1.26 3.63l1.46 1.46A7.938 7.938 0 0 0 20 14c0-4.42-3.58-8-8-8z" fill="#444"/></svg>
-      `;
-      btn.onclick = async function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        await popUndo();
-      };
-      let drawPolygonBtn = toolbar.querySelector('.leaflet-draw-draw-polygon');
-      if (drawPolygonBtn && drawPolygonBtn.nextSibling)
-        toolbar.insertBefore(btn, drawPolygonBtn.nextSibling);
-      else
-        toolbar.appendChild(btn);
-    }
-
     // ポリゴン基本style
     const polygonStyle = {
       color: "#e4007f",
@@ -160,10 +104,10 @@
       fillOpacity: 0.4
     };
 
-    // ポリゴン描画ボタンだけ表示
+    // ポリゴン描画ボタン＋削除ボタンのみ表示
     const drawControl = new L.Control.Draw({
       position: 'topleft',
-      edit: { featureGroup: drawnItems, edit: false, remove: false },
+      edit: { featureGroup: drawnItems, edit: false, remove: true },
       draw: {
         polygon: {
           allowIntersection: false,
@@ -182,9 +126,23 @@
       }
     });
     map.addControl(drawControl);
-    setTimeout(addUndoButton, 500);
 
-    // 吹き出し・編集・削除
+    // 削除ボタンのLeaflet DrawデフォルトUIの位置調整&SVG差し替え
+    function customizeRemoveBtn() {
+      const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
+      if (!toolbar) return;
+      let removeBtn = toolbar.querySelector('.leaflet-draw-edit-remove');
+      if (removeBtn) {
+        removeBtn.classList.add('leaflet-draw-remove');
+        // SVGリセット
+        removeBtn.innerHTML = `
+        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="#d32f2f"/></svg>
+        `;
+      }
+    }
+    setTimeout(customizeRemoveBtn, 500);
+
+    // 吹き出し・編集
     function bindPolygonInfo(layer, date, name) {
       let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
       layer.bindPopup(infoHtml, { closeButton: false });
@@ -201,7 +159,6 @@
       const id = geojson.properties && geojson.properties.id;
       bindPolygonInfo(layer, date, name);
       bindPolygonEditEvent(layer, id);
-      bindPolygonDeleteEvent(layer, id);
     }
     function bindPolygonEditEvent(layer, id) {
       layer.on('click', function(e) {
@@ -235,45 +192,6 @@
         map.once('click', finishEdit);
       });
     }
-    function bindPolygonDeleteEvent(layer, id) {
-      let lastTap = 0, tapCount = 0;
-      const isTouch = 'ontouchstart' in window;
-      if (isTouch) {
-        layer.on('click', function(e) {
-          const now = Date.now();
-          tapCount = (now - lastTap < 400) ? tapCount + 1 : 1;
-          lastTap = now;
-          if (tapCount === 2) {
-            tapCount = 0;
-            if (confirm('本当に削除しますか？')) {
-              fetch('http://localhost:3001/api/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: id })
-              }).then(res => res.json())
-                .then(json => {
-                  if (json.status === 'ok') drawnItems.removeLayer(layer);
-                });
-            }
-          }
-        });
-      } else {
-        layer.on('dblclick', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (confirm('本当に削除しますか？')) {
-            fetch('http://localhost:3001/api/delete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: id })
-            }).then(res => res.json())
-              .then(json => {
-                if (json.status === 'ok') drawnItems.removeLayer(layer);
-              });
-          }
-        });
-      }
-    }
 
     // ページ表示時に全ポリゴン取得して描画
     window.addEventListener('DOMContentLoaded', function() {
@@ -295,13 +213,11 @@
               });
             }
           });
-          pushUndo();
         });
     });
 
     // ポリゴン新規作成
     map.on(L.Draw.Event.CREATED, function (e) {
-      pushUndo();
       const layer = e.layer;
       layer.setStyle && layer.setStyle(polygonStyle);
       drawnItems.addLayer(layer);
@@ -336,9 +252,8 @@
         });
     });
 
-    // 編集時undo積む
+    // 編集時も保存
     map.on('draw:edited', function (e) {
-      pushUndo();
       e.layers.eachLayer(function (layer) {
         let geojson = layer.toGeoJSON();
         let id = geojson.properties && geojson.properties.id;
