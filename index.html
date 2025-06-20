@@ -255,7 +255,7 @@
     });
     map.addControl(drawControl);
 
-fetch('localhost:3001/api/polygons')
+fetch('http://localhost:3001/api/polygons')
   .then(res => res.json())
   .then(polygons => {
     polygons.forEach(geojson => {
@@ -280,7 +280,7 @@ fetch('localhost:3001/api/polygons')
         alert("実施日を入力してください");
         return;
       }
-      fetch('localhost:3001/api/save', {
+      fetch('http://localhost:3001/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -304,7 +304,7 @@ fetch('localhost:3001/api/polygons')
         // サーバーに修正を通知
         const date = document.getElementById("date").value;
         const name = document.getElementById("name").value;
-        fetch('localhost:3001/api/update', {
+        fetch('http://localhost:3001/api/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -327,7 +327,7 @@ fetch('localhost:3001/api/polygons')
     // ポリゴン削除時
     map.on('draw:deleted', function (e) {
       e.layers.eachLayer(function (layer) {
-        fetch('localhost:3001/api/delete', {
+        fetch('http://localhost:3001/api/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
