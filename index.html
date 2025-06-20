@@ -15,7 +15,6 @@
     #form input { margin-top: 4px; padding: 4px; font-size: 0.95em; border: 1px solid #ccc; border-radius: 4px; min-width: 90px; box-sizing: border-box; }
     #map { flex: 1 1 auto; height: 70vh; width: 100%; min-height: 350px; max-height: 100dvh; z-index: 1; }
     .leaflet-div-icon { width: 6px !important; height: 6px !important; margin-left: -3px !important; margin-top: -3px !important; border-radius: 3px !important; border: 2px solid #e4007f !important; background: #fff !important; }
-
     .custom-help-container { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); z-index: 1003; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
     .custom-help-btn { width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #e4007f; border: 2px solid #e4007f; font-size: 22px; font-weight: bold; text-align: center; line-height: 28px; box-shadow: 0 2px 6px rgba(60,64,67,0.12); cursor: pointer; user-select: none; pointer-events: auto; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
     .custom-help-btn:active, .custom-help-btn:focus { background: #e4007f; color: #fff; }
@@ -24,6 +23,23 @@
     .custom-help-balloon:after { content: ""; position: absolute; top: -11px; right: 22px; border: 6px solid transparent; border-bottom: 10px solid #fff; }
     /* 吹き出し（popup）の閉じるボタン非表示 */
     .leaflet-popup-close-button { display: none !important; }
+    /* 描画ボタンと同サイズのカスタムundoボタン */
+    .leaflet-draw-toolbar .leaflet-draw-undo {
+      width: 30px; height: 30px; margin: 7px 0 0 0; background: #fff;
+      border: 2px solid #666; border-radius: 4px; box-shadow: 0 1.5px 6px rgba(60,64,67,0.12);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .leaflet-draw-toolbar .leaflet-draw-undo svg {
+      width: 20px; height: 20px; display: block;
+    }
+    .leaflet-draw-toolbar .leaflet-draw-undo:hover {
+      background: #eee;
+      border-color: #e4007f;
+    }
+    .leaflet-draw-toolbar .leaflet-draw-undo:active {
+      background: #e4007f;
+      border-color: #e4007f;
+    }
     @media (max-width: 600px) {
       #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
       #form label { min-width: 90px; font-size: 0.95em; }
@@ -32,23 +48,14 @@
       .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
       .custom-help-balloon:before { right: 16px; }
       .custom-help-balloon:after { right: 18px; }
+      .leaflet-draw-toolbar .leaflet-draw-undo { width: 28px; height: 28px; }
+      .leaflet-draw-toolbar .leaflet-draw-undo svg { width: 17px; height: 17px; }
     }
     @media (max-width: 400px) {
       #form label { min-width: 70px; font-size: 0.9em; }
     }
     .leaflet-draw-toolbar .leaflet-draw-edit-edit,
     .leaflet-draw-toolbar .leaflet-draw-edit-remove { display: none !important; }
-    .custom-undo-btn {
-      background: #fff; color: #e4007f; border: 2px solid #e4007f;
-      border-radius: 5px; padding: 4px 14px; margin-top: 7px;
-      font-size: 16px; font-weight: bold; cursor: pointer; display: block;
-      transition: background 0.15s, color 0.15s;
-      box-shadow: 0 1px 3px rgba(60,64,67,0.13);
-    }
-    .custom-undo-btn:active, .custom-undo-btn:focus {
-      background: #e4007f;
-      color: #fff;
-    }
   </style>
 </head>
 <body>
@@ -106,17 +113,22 @@
 
     // ---- undo機能 ----
     let undoStack = [];
-    function pushUndo() {
+    function getCurrentState() {
       let state = [];
       drawnItems.eachLayer(layer => {
         if (layer.toGeoJSON) state.push(layer.toGeoJSON());
       });
-      undoStack.push(state);
+      return state;
+    }
+    async function pushUndo() {
+      undoStack.push(await getCurrentState());
       if (undoStack.length > 20) undoStack.shift();
     }
-    function popUndo() {
+    async function popUndo() {
       if (undoStack.length === 0) return;
       const prevState = undoStack.pop();
+
+      // 地図をクリアし、undo状態から復元
       drawnItems.clearLayers();
       prevState.forEach(geojson => {
         L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
@@ -124,24 +136,41 @@
           drawnItems.addLayer(layer);
         });
       });
+
+      // サーバーに全件上書き
+      await fetch('http://localhost:3001/api/overwrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ polygons: prevState })
+      });
     }
-    // カスタム「戻る」ボタン
-    L.Control.CustomUndo = L.Control.extend({
-      options: { position: 'topleft' },
-      onAdd: function(map) {
-        var div = L.DomUtil.create('div', 'leaflet-control custom-undo-container');
-        var btn = L.DomUtil.create('button', 'custom-undo-btn', div);
-        btn.innerText = '戻る';
-        btn.title = 'ひとつ前の操作に戻る';
-        btn.onclick = function(e) {
-          e.stopPropagation();
-          popUndo();
-        };
-        L.DomEvent.disableClickPropagation(div);
-        return div;
-      },
-      onRemove: function(map) {}
-    });
+    // カスタムundoボタン（画像参照）
+    function addUndoButton() {
+      const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
+      if (!toolbar) return;
+      // すでに追加済みなら何もしない
+      if (toolbar.querySelector('.leaflet-draw-undo')) return;
+
+      const btn = document.createElement('a');
+      btn.className = 'leaflet-draw-draw-polyline leaflet-draw-undo';
+      btn.href = '#';
+      btn.title = '戻る';
+      btn.style.display = 'flex';
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" style="display:block; margin:auto;"><path d="M12 5V2L7 7l5 5V8c3.31 0 6 2.69 6 6 0 1.37-.47 2.63-1.26 3.63l1.46 1.46A7.938 7.938 0 0 0 20 14c0-4.42-3.58-8-8-8z" fill="#444"/></svg>
+      `; // 画像に合わせたリロード風アイコン
+      btn.onclick = async function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        await popUndo();
+      };
+      // ポリゴン描画ボタンの下に挿入
+      let drawPolygonBtn = toolbar.querySelector('.leaflet-draw-draw-polygon');
+      if (drawPolygonBtn && drawPolygonBtn.nextSibling)
+        toolbar.insertBefore(btn, drawPolygonBtn.nextSibling);
+      else
+        toolbar.appendChild(btn);
+    }
 
     // ---- drawControl ----
     const polygonStyle = {
@@ -173,8 +202,8 @@
     });
     map.addControl(drawControl);
 
-    // 戻るボタンを追加
-    map.addControl(new L.Control.CustomUndo());
+    // 描画ボタンUI生成後にundoボタン挿入
+    setTimeout(addUndoButton, 500);
 
     // ---- ポリゴン吹き出し・編集・削除 ----
     const editLayerGroup = new L.FeatureGroup();
@@ -209,7 +238,7 @@
         editLayerGroup.addLayer(layer);
         editHandler = new L.EditToolbar.Edit(map, { featureGroup: editLayerGroup });
         editHandler.enable();
-        map.once('click', function(ev) {
+        map.once('click', async function(ev) {
           if (editHandler) {
             editHandler.disable();
             editLayerGroup.clearLayers();
@@ -217,7 +246,7 @@
               const geojson = layer.toGeoJSON();
               const date = geojson.properties && geojson.properties.date || document.getElementById('date').value;
               const name = geojson.properties && geojson.properties.name || document.getElementById('name').value;
-              fetch('http://localhost:3001/api/update', {
+              await fetch('http://localhost:3001/api/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -226,14 +255,7 @@
                   name,
                   polygon: geojson
                 })
-              }).then(res => res.json())
-                .then(json => {
-                  if (json.status !== 'ok') {
-                    alert('修正に失敗しました: ' + (json.error || ''));
-                  }
-                }).catch(() => {
-                  alert('サーバーに接続できませんでした');
-                });
+              });
             }
             editingLayer = null;
           }
@@ -258,15 +280,14 @@
               }).then(res => res.json())
                 .then(json => {
                   if (json.status === 'ok') drawnItems.removeLayer(layer);
-                  else alert('削除に失敗しました: ' + (json.error || ''));
-                }).catch(() => {
-                  alert('サーバーに接続できませんでした');
                 });
             }
           }
         });
       } else {
         layer.on('dblclick', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
           if (confirm('本当に削除しますか？')) {
             fetch('http://localhost:3001/api/delete', {
               method: 'POST',
@@ -275,9 +296,6 @@
             }).then(res => res.json())
               .then(json => {
                 if (json.status === 'ok') drawnItems.removeLayer(layer);
-                else alert('削除に失敗しました: ' + (json.error || ''));
-              }).catch(() => {
-                alert('サーバーに接続できませんでした');
               });
           }
         });
@@ -296,9 +314,6 @@
           });
         });
         pushUndo();
-      })
-      .catch(err => {
-        console.error('既存ポリゴン取得失敗', err);
       });
 
     map.on(L.Draw.Event.CREATED, function (e) {
@@ -334,9 +349,6 @@
             alert('保存に失敗しました: ' + (json.error || ''));
             drawnItems.removeLayer(layer);
           }
-        }).catch(() => {
-          alert('サーバーに接続できませんでした');
-          drawnItems.removeLayer(layer);
         });
     });
 
@@ -356,14 +368,7 @@
             name,
             polygon: geojson
           })
-        }).then(res => res.json())
-          .then(json => {
-            if (json.status !== 'ok') {
-              alert('修正に失敗しました: ' + (json.error || ''));
-            }
-          }).catch(() => {
-            alert('サーバーに接続できませんでした');
-          });
+        });
       });
     });
 
