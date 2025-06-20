@@ -281,19 +281,19 @@
         let geojson = layer.toGeoJSON();
         let id = geojson.properties && geojson.properties.id;
         if (id) {
-          // サーバーへ削除リクエスト
           deletePromises.push(
             fetch('http://localhost:3001/api/delete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ id: id })
-            })
+            }).then(res => res.json())
           );
         }
       });
-      // Promise.allでエラー確認もできる
       Promise.all(deletePromises)
-        .then(() => {})
+        .then(results => {
+          // 全削除完了後の処理（必要に応じて）
+        })
         .catch(err => {
           alert('削除処理でエラーが発生しました');
         });
