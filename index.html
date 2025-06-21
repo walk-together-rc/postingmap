@@ -12,48 +12,35 @@
     h1 { background-color: #e4007f; color: white; padding: 12px 10px 10px 10px; margin: 0; font-size: 1.3em; letter-spacing: 0.05em; }
     #form {
       padding: 10px; background-color: #f9f9f9; border-bottom: 1px solid #ccc;
-      display: flex; gap: 1rem; align-items: center; font-size: 0.95em;
+      display: flex; gap: 1rem; align-items: flex-end; font-size: 0.95em;
       flex-wrap: wrap; position: relative; z-index: 1002;
+      justify-content: flex-start;
     }
     #form label {
       display: flex; flex-direction: column; font-weight: bold;
-      margin-bottom: 4px; font-size: 1em; cursor: pointer;
-    }
-    #form label[for="date"] {
+      margin-bottom: 0; font-size: 1em; cursor: pointer;
       min-width: 140px;
-      max-width: 200px;
+      max-width: 240px;
       flex: 0 0 auto;
+      margin-right: 12px;
+      white-space: nowrap;
     }
-    #form label[for="name"] {
-      min-width: 100px;
-      max-width: 140px;
-      flex: 0 0 auto;
-    }
-    #form input[type="date"] {
-      margin-top: 4px; padding: 4px; font-size: 0.95em;
-      border: 1px solid #ccc; border-radius: 4px;
-      width: 130px;
-      min-width: 110px;
-      max-width: 200px;
-      box-sizing: border-box;
-    }
+    #form input[type="date"],
     #form input[type="text"] {
-      margin-top: 4px; padding: 4px; font-size: 0.95em;
+      margin-top: 4px; padding: 4px; font-size: 1em;
       border: 1px solid #ccc; border-radius: 4px;
-      width: 110px;
-      min-width: 80px;
-      max-width: 140px;
+      width: 170px;
+      min-width: 120px;
+      max-width: 220px;
       box-sizing: border-box;
     }
-    #name { width: 110px; min-width: 80px; max-width: 140px; box-sizing: border-box; }
-    #map {
-      flex: 1 1 auto; min-height: 350px; width: 100vw; height: 70vh; max-height: 100dvh; z-index: 1;
-      /* 地図が親のflexで縮んでしまうのを防ぐ */
-      display: block;
-    }
+    #name { width: 170px; min-width: 120px; max-width: 220px; box-sizing: border-box; }
     .custom-help-container {
-      position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
-      z-index: 1003; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none;
+      position: static;
+      margin-left: auto;
+      display: flex; flex-direction: column; align-items: flex-end; pointer-events: none;
+      /* デフォルトは position: absolute だが、スマホ等で被るのを防ぐためstatic＋margin-left:autoで右端に */
+      z-index: 1003;
     }
     .custom-help-btn { width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #e4007f; border: 2px solid #e4007f; font-size: 22px; font-weight: bold; text-align: center; line-height: 28px; box-shadow: 0 2px 6px rgba(60,64,67,0.12); cursor: pointer; user-select: none; pointer-events: auto; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
     .custom-help-btn:active, .custom-help-btn:focus { background: #e4007f; color: #fff; }
@@ -77,18 +64,40 @@
       background: #e4007f;
       border-color: #e4007f;
     }
-    /* 削除時の「Clear All」ボタンのみ非表示 */
     .leaflet-draw-actions li.leaflet-draw-action[title*="Clear"],
     .leaflet-draw-actions li.leaflet-draw-action[title*="全削除"],
     .leaflet-draw-actions li.leaflet-draw-action[title*="クリア"] {
       display: none !important;
     }
+    #map {
+      flex: 1 1 auto; min-height: 350px; width: 100vw; height: 70vh; max-height: 100dvh; z-index: 1;
+      display: block;
+    }
+    @media (max-width: 900px) {
+      #form label { min-width: 100px; max-width: 170px; }
+      #form input[type="date"], #form input[type="text"], #name { width: 120px; min-width: 90px; max-width: 170px; }
+    }
     @media (max-width: 600px) {
-      #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
-      #form label[for="date"] { min-width: 122px; max-width: 170px; }
-      #form label[for="name"] { min-width: 80px; max-width: 110px; }
-      #form input[type="date"] { font-size: 16px !important; min-width: 108px; width: 122px; max-width: 170px; }
-      #form input[type="text"], #name { font-size: 16px !important; min-width: 78px; width: 80px; max-width: 110px; }
+      #form {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+      #form label {
+        min-width: 100px;
+        max-width: 170px;
+        margin-right: 8px;
+        font-size: 0.95em;
+      }
+      #form input[type="date"], #form input[type="text"], #name {
+        font-size: 16px !important;
+        width: 120px; min-width: 90px; max-width: 170px;
+      }
+      .custom-help-container {
+        margin-left: 0;
+        margin-top: 8px;
+        width: 100%;
+        justify-content: flex-end;
+      }
       .custom-help-btn { width: 28px; height: 28px; font-size: 18px; line-height: 24px; }
       .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
       .custom-help-balloon:before { right: 16px; }
@@ -97,10 +106,8 @@
       .leaflet-draw-toolbar .leaflet-draw-remove svg { width: 17px; height: 17px; }
     }
     @media (max-width: 400px) {
-      #form label[for="date"] { min-width: 80px; max-width: 100px; }
-      #form label[for="name"] { min-width: 50px; max-width: 70px; }
-      #form input[type="date"] { min-width: 70px; width: 80px; max-width: 100px; }
-      #form input[type="text"], #name { min-width: 45px; width: 50px; max-width: 70px; }
+      #form label { min-width: 70px; max-width: 110px; }
+      #form input[type="date"], #form input[type="text"], #name { width: 70px; min-width: 60px; max-width: 110px; }
     }
     .leaflet-draw-toolbar .leaflet-draw-edit-edit { display: none !important; }
   </style>
