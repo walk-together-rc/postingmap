@@ -36,13 +36,23 @@
     }
     #name { width: 170px; min-width: 120px; max-width: 220px; box-sizing: border-box; }
     .custom-help-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: flex-end;
+      margin-left: 12px;
+      margin-bottom: 0.9em; /* 入力枠と縦位置を揃える */
       position: static;
-      margin-left: auto;
-      display: flex; flex-direction: column; align-items: flex-end; pointer-events: none;
-      /* デフォルトは position: absolute だが、スマホ等で被るのを防ぐためstatic＋margin-left:autoで右端に */
+      pointer-events: none;
       z-index: 1003;
+      height: 40px; /* 入力枠と同じ高さに揃える */
     }
-    .custom-help-btn { width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #e4007f; border: 2px solid #e4007f; font-size: 22px; font-weight: bold; text-align: center; line-height: 28px; box-shadow: 0 2px 6px rgba(60,64,67,0.12); cursor: pointer; user-select: none; pointer-events: auto; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
+    .custom-help-btn {
+      width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #e4007f; border: 2px solid #e4007f;
+      font-size: 22px; font-weight: bold; text-align: center; line-height: 28px; box-shadow: 0 2px 6px rgba(60,64,67,0.12);
+      cursor: pointer; user-select: none; pointer-events: auto; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
     .custom-help-btn:active, .custom-help-btn:focus { background: #e4007f; color: #fff; }
     .custom-help-balloon { position: absolute; top: 38px; right: 0; width: 270px; max-width: 70vw; background: #fff; color: #333; font-size: 1em; border: 1.5px solid #e4007f; border-radius: 7px; box-shadow: 0 2px 12px rgba(0,0,0,0.16); padding: 15px 14px 15px 18px; z-index: 1004; pointer-events: auto; word-break: break-word; line-height: 1.7; display: none; }
     .custom-help-balloon:before { content: ""; position: absolute; top: -13px; right: 20px; border: 7px solid transparent; border-bottom: 10px solid #e4007f; }
@@ -73,30 +83,55 @@
       flex: 1 1 auto; min-height: 350px; width: 100vw; height: 70vh; max-height: 100dvh; z-index: 1;
       display: block;
     }
+    /* 編集モード時のドット（ハンドル）を小さく */
+    .leaflet-editing-icon, .leaflet-touch-icon,
+    .leaflet-edit-resize, .leaflet-edit-move {
+      width: 4px !important;
+      height: 4px !important;
+      margin-left: -2px !important;
+      margin-top: -2px !important;
+      border-width: 2px !important;
+    }
+    /* 削除モード時はドット非表示 */
+    .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-editing-icon,
+    .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-touch-icon,
+    .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-edit-resize,
+    .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-edit-move {
+      display: none !important;
+    }
+    /* より確実に削除(削除モード時は .leaflet-edit-remove-active 付きます) */
+    .leaflet-edit-remove-active .leaflet-editing-icon,
+    .leaflet-edit-remove-active .leaflet-touch-icon,
+    .leaflet-edit-remove-active .leaflet-edit-resize,
+    .leaflet-edit-remove-active .leaflet-edit-move {
+      display: none !important;
+    }
     @media (max-width: 900px) {
       #form label { min-width: 100px; max-width: 170px; }
-      #form input[type="date"], #form input[type="text"], #name { width: 120px; min-width: 90px; max-width: 170px; }
+      #form input[type="date"], #form input[type="text"], #name { width: 156px; min-width: 117px; max-width: 221px; }
     }
     @media (max-width: 600px) {
       #form {
         flex-wrap: wrap;
         gap: 0.4rem;
+        align-items: flex-end;
       }
       #form label {
-        min-width: 100px;
+        min-width: 110px;
         max-width: 170px;
         margin-right: 8px;
         font-size: 0.95em;
       }
       #form input[type="date"], #form input[type="text"], #name {
         font-size: 16px !important;
-        width: 120px; min-width: 90px; max-width: 170px;
+        width: 156px; min-width: 117px; max-width: 221px;
       }
       .custom-help-container {
         margin-left: 0;
-        margin-top: 8px;
-        width: 100%;
-        justify-content: flex-end;
+        margin-bottom: 0.6em;
+        margin-top: 0;
+        height: 40px;
+        width: auto;
       }
       .custom-help-btn { width: 28px; height: 28px; font-size: 18px; line-height: 24px; }
       .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
@@ -107,7 +142,7 @@
     }
     @media (max-width: 400px) {
       #form label { min-width: 70px; max-width: 110px; }
-      #form input[type="date"], #form input[type="text"], #name { width: 70px; min-width: 60px; max-width: 110px; }
+      #form input[type="date"], #form input[type="text"], #name { width: 91px; min-width: 78px; max-width: 143px; }
     }
     .leaflet-draw-toolbar .leaflet-draw-edit-edit { display: none !important; }
   </style>
@@ -206,10 +241,24 @@
             li.parentNode.removeChild(li);
           }
         });
+
+        // 削除モード時は編集用ドットを非表示
+        const mapContainer = document.getElementById('map');
+        if (mapContainer) {
+          mapContainer.classList.add('leaflet-edit-remove-active');
+        }
+      }
+      function clearRemoveActive() {
+        const mapContainer = document.getElementById('map');
+        if (mapContainer) {
+          mapContainer.classList.remove('leaflet-edit-remove-active');
+        }
       }
       setTimeout(customizeRemoveBtn, 500);
-      map.on('draw:editstart', customizeRemoveBtn);
+      map.on('draw:editstart', clearRemoveActive);
       map.on('draw:deletestart', customizeRemoveBtn);
+      map.on('draw:editstop', clearRemoveActive);
+      map.on('draw:deletestop', clearRemoveActive);
 
       // 吹き出し＆編集
       function bindPolygonInfo(layer, date, name) {
@@ -387,7 +436,6 @@
             if (!result.status || result.status !== "ok") {
               alert('一部の削除に失敗しました');
             }
-            // スマホで地図に消えない場合用に再読み込み
             if ('ontouchstart' in window || window.matchMedia('(pointer: coarse)').matches) {
               setTimeout(loadAllPolygons, 500);
             }
@@ -398,7 +446,6 @@
       });
     }
 
-    // DOMContentLoaded後に地図初期化
     window.addEventListener('DOMContentLoaded', function() {
       setTimeout(initMap, 0);
     });
