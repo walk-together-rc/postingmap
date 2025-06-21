@@ -304,6 +304,12 @@
             const geojson = layer.toGeoJSON();
             const date = document.getElementById('date').value;
             const name = document.getElementById('name').value;
+            if (!date) {
+              alert("実施日を入力してください");
+              map.off(isTouch() ? 'touchstart' : 'click', finishEdit);
+              map._editingPolygon = null;
+              return;
+            }
             geojson.properties = geojson.properties || {};
             geojson.properties.id = layer.feature?.properties?.id;
             geojson.properties.date = date;
@@ -317,6 +323,12 @@
                 name,
                 polygon: geojson
               })
+            }).then(() => {
+              // 必ずfeature情報を上書きしておく（リロード対策）
+              layer.feature = layer.feature || {};
+              layer.feature.type = geojson.type;
+              layer.feature.geometry = geojson.geometry;
+              layer.feature.properties = geojson.properties;
             });
           }
           map.off(isTouch() ? 'touchstart' : 'click', finishEdit);
@@ -352,6 +364,12 @@
                 Array.isArray(geojson.geometry.coordinates)
               ) {
                 L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
+                  // featureを必ず付与（編集・リロード時の欠損対策）
+                  layer.feature = {
+                    type: geojson.type,
+                    geometry: geojson.geometry,
+                    properties: geojson.properties
+                  };
                   applyLayerBindings(layer, geojson);
                   drawnItems.addLayer(layer);
                 });
@@ -397,14 +415,17 @@
           });
       });
 
-      // 編集時も保存（ここを修正！）
+      // 編集時も保存
       map.on('draw:edited', function (e) {
         e.layers.eachLayer(function (layer) {
           let geojson = layer.toGeoJSON();
           let id = geojson.properties && geojson.properties.id;
           const date = document.getElementById("date").value;
           const name = document.getElementById("name").value;
-          // <--- ここで必ずプロパティにdate/name/idをセットする
+          if (!date) {
+            alert("実施日を入力してください");
+            return;
+          }
           geojson.properties = geojson.properties || {};
           geojson.properties.id = id;
           geojson.properties.date = date;
@@ -418,6 +439,12 @@
               name,
               polygon: geojson
             })
+          }).then(() => {
+            // featureを必ず上書き（リロード時の欠損対策）
+            layer.feature = layer.feature || {};
+            layer.feature.type = geojson.type;
+            layer.feature.geometry = geojson.geometry;
+            layer.feature.properties = geojson.properties;
           });
         });
       });
