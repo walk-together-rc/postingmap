@@ -10,7 +10,6 @@
     html, body { height: 100%; margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: sans-serif; margin: 0; padding: 0; height: 100dvh; min-height: 100dvh; background: #fff; display: flex; flex-direction: column; }
     h1 { background-color: #e4007f; color: white; padding: 12px 10px 10px 10px; margin: 0; font-size: 1.3em; letter-spacing: 0.05em; position: relative; }
-
     #form {
       padding: 10px; background-color: #f9f9f9; border-bottom: 1px solid #ccc;
       display: flex; gap: 1rem; align-items: flex-end; font-size: 0.95em;
@@ -36,7 +35,6 @@
       box-sizing: border-box;
     }
     #name { width: 170px; min-width: 120px; max-width: 220px; box-sizing: border-box; }
-
     .custom-help-container {
       position: absolute;
       right: 14px;
@@ -52,6 +50,10 @@
     }
     #form {
       position: relative;
+    }
+    #map {
+      flex: 1 1 auto; min-height: 350px; width: 100vw; height: 70vh; max-height: 100dvh; z-index: 1;
+      display: block;
     }
     @media (max-width: 900px) {
       #form label { min-width: 100px; max-width: 170px; }
@@ -101,7 +103,6 @@
     .custom-help-balloon { position: absolute; top: 38px; right: 0; width: 270px; max-width: 70vw; background: #fff; color: #333; font-size: 1em; border: 1.5px solid #e4007f; border-radius: 7px; box-shadow: 0 2px 12px rgba(0,0,0,0.16); padding: 15px 14px 15px 18px; z-index: 1004; pointer-events: auto; word-break: break-word; line-height: 1.7; display: none; }
     .custom-help-balloon:before { content: ""; position: absolute; top: -13px; right: 20px; border: 7px solid transparent; border-bottom: 10px solid #e4007f; }
     .custom-help-balloon:after { content: ""; position: absolute; top: -11px; right: 22px; border: 6px solid transparent; border-bottom: 10px solid #fff; }
-
     .leaflet-popup-close-button { display: none !important; }
     .leaflet-draw-toolbar .leaflet-draw-remove {
       width: 30px; height: 30px; margin: 7px 0 0 0; background: #fff;
@@ -139,9 +140,7 @@
   </style>
 </head>
 <body>
-  <h1>
-    一致団結ポスティングマップ
-  </h1>
+  <h1>一致団結ポスティングマップ</h1>
   <div id="form">
     <label for="date">実施日（必須）
       <input type="date" id="date" required />
@@ -179,6 +178,7 @@
 
     let map;
     let drawnItems;
+
     function initMap() {
       map = L.map('map', { tap: false }).setView([35.6996, 139.7652], 13);
       window.map = map;
@@ -217,17 +217,7 @@
 
       // 削除ボタンカスタマイズ＋Clear Allの動作上書き
       function customizeRemoveBtn() {
-        const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
-        if (toolbar) {
-          let removeBtn = toolbar.querySelector('.leaflet-draw-edit-remove');
-          if (removeBtn) {
-            removeBtn.classList.add('leaflet-draw-remove');
-            removeBtn.innerHTML = `
-            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="#d32f2f"/></svg>
-            `;
-          }
-        }
-        // Clear All/全削除ボタンの動作上書き
+        // Clear All等のボタンを検出
         document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action').forEach(li => {
           const t = li.getAttribute('title') || '';
           if (t.includes('Clear') || t.includes('全削除') || t.includes('クリア')) {
@@ -235,7 +225,6 @@
               e.preventDefault();
               e.stopPropagation();
               alert('この機能は使えません');
-              // 再描画（消えた図形を復活）
               loadAllPolygons();
               return false;
             }, true);
@@ -347,6 +336,7 @@
         bindPolygonInfo(layer, date, name);
       }
 
+      // 再描画用
       function loadAllPolygons() {
         fetch('http://localhost:3001/api/polygons')
           .then(res => res.json())
@@ -416,14 +406,6 @@
 
       map.on('draw:edited', function (e) {
         e.layers.eachLayer(function (layer) {
-          const originalGeoJSON = layer.feature
-            ? {
-                type: layer.feature.type,
-                geometry: JSON.parse(JSON.stringify(layer.feature.geometry)),
-                properties: JSON.parse(JSON.stringify(layer.feature.properties))
-              }
-            : layer.toGeoJSON();
-
           let geojson = layer.toGeoJSON();
           let id = (layer.feature && layer.feature.properties && layer.feature.properties.id) || geojson.properties && geojson.properties.id;
           const date = document.getElementById("date").value;
