@@ -37,11 +37,14 @@
     }
     #name { width: 170px; min-width: 120px; max-width: 220px; box-sizing: border-box; }
 
-    /* ？マークを画面右端に固定 */
+    /* ？マークを画面右端＋フォーム中央高さに */
     .custom-help-container {
       position: fixed;
-      top: 60px; /* ヘッダー&フォーム高さ考慮。必要に応じて微調整 */
       right: 12px;
+      /* 高さをform中央に合わせる */
+      top: calc(10px + 0.5 * (48px)); /* 10px(フォームpadding) + 0.5*フォーム本体高さ */
+      /* フォーム高さはlabel/input・ボタンなど含め約48pxが一般的 */
+      transform: translateY(0);
       display: flex;
       flex-direction: column;
       align-items: flex-end;
@@ -50,6 +53,47 @@
       height: 40px;
       margin: 0;
     }
+    @media (max-width: 900px) {
+      #form label { min-width: 100px; max-width: 170px; }
+      #form input[type="date"], #form input[type="text"], #name { width: 156px; min-width: 117px; max-width: 221px; }
+    }
+    @media (max-width: 600px) {
+      #form {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        align-items: flex-end;
+      }
+      #form label {
+        min-width: 110px;
+        max-width: 170px;
+        margin-right: 8px;
+        font-size: 0.95em;
+      }
+      /* 実施日枠を今の1.15倍に（例：156px→約180px） */
+      #form input[type="date"] {
+        font-size: 16px !important;
+        width: 180px; min-width: 132px; max-width: 254px;
+      }
+      #form input[type="text"], #name {
+        font-size: 16px !important;
+        width: 156px; min-width: 117px; max-width: 221px;
+      }
+      .custom-help-container {
+        top: calc(6px + 0.5 * 48px); /* 6px=padding, 48px=form高さ目安 */
+        right: 12px;
+        left: auto;
+        bottom: auto;
+      }
+    }
+    @media (max-width: 400px) {
+      #form label { min-width: 70px; max-width: 110px; }
+      #form input[type="date"] { width: 105px; min-width: 80px; max-width: 143px; }
+      #form input[type="text"], #name { width: 91px; min-width: 78px; max-width: 143px; }
+      .custom-help-container {
+        top: calc(3px + 0.5 * 44px);
+      }
+    }
+
     .custom-help-btn {
       width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #e4007f; border: 2px solid #e4007f;
       font-size: 22px; font-weight: bold; text-align: center; line-height: 28px; box-shadow: 0 2px 6px rgba(60,64,67,0.12);
@@ -108,55 +152,6 @@
     .leaflet-edit-remove-active .leaflet-edit-resize,
     .leaflet-edit-remove-active .leaflet-edit-move {
       display: none !important;
-    }
-    @media (max-width: 900px) {
-      #form label { min-width: 100px; max-width: 170px; }
-      #form input[type="date"], #form input[type="text"], #name { width: 156px; min-width: 117px; max-width: 221px; }
-    }
-    @media (max-width: 600px) {
-      #form {
-        flex-wrap: wrap;
-        gap: 0.4rem;
-        align-items: flex-end;
-      }
-      #form label {
-        min-width: 110px;
-        max-width: 170px;
-        margin-right: 8px;
-        font-size: 0.95em;
-      }
-      /* 実施日枠を今の1.15倍に（例：156px→約180px） */
-      #form input[type="date"] {
-        font-size: 16px !important;
-        width: 180px; min-width: 132px; max-width: 254px;
-      }
-      #form input[type="text"], #name {
-        font-size: 16px !important;
-        width: 156px; min-width: 117px; max-width: 221px;
-      }
-      .custom-help-container {
-        top: auto;
-        bottom: auto;
-        left: auto;
-        right: 12px;
-        position: fixed;
-        margin-bottom: 0.6em;
-        margin-left: 0;
-        margin-top: 0;
-        height: 40px;
-        width: auto;
-      }
-      .custom-help-btn { width: 28px; height: 28px; font-size: 18px; line-height: 24px; }
-      .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
-      .custom-help-balloon:before { right: 16px; }
-      .custom-help-balloon:after { right: 18px; }
-      .leaflet-draw-toolbar .leaflet-draw-remove { width: 28px; height: 28px; }
-      .leaflet-draw-toolbar .leaflet-draw-remove svg { width: 17px; height: 17px; }
-    }
-    @media (max-width: 400px) {
-      #form label { min-width: 70px; max-width: 110px; }
-      #form input[type="date"] { width: 105px; min-width: 80px; max-width: 143px; }
-      #form input[type="text"], #name { width: 91px; min-width: 78px; max-width: 143px; }
     }
     .leaflet-draw-toolbar .leaflet-draw-edit-edit { display: none !important; }
   </style>
