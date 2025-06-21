@@ -119,17 +119,17 @@
       background: #e4007f;
       border-color: #e4007f;
     }
+    /* Clear All/全削除/クリアボタンを完全非表示 */
     .leaflet-draw-actions li.leaflet-draw-action[title*="Clear"],
     .leaflet-draw-actions li.leaflet-draw-action[title*="全削除"],
     .leaflet-draw-actions li.leaflet-draw-action[title*="クリア"] {
-      pointer-events: none !important;
-      opacity: 0.5 !important;
-      filter: grayscale(1);
+      display: none !important;
     }
     #map {
       flex: 1 1 auto; min-height: 350px; width: 100vw; height: 70vh; max-height: 100dvh; z-index: 1;
       display: block;
     }
+    /* 編集モード時のドット（ハンドル）を小さく */
     .leaflet-editing-icon, .leaflet-touch-icon,
     .leaflet-edit-resize, .leaflet-edit-move {
       width: 4px !important;
@@ -138,12 +138,7 @@
       margin-top: -2px !important;
       border-width: 2px !important;
     }
-    .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-editing-icon,
-    .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-touch-icon,
-    .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-edit-resize,
-    .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-edit-move {
-      display: none !important;
-    }
+    /* 削除モード時は編集用ドットを完全非表示 */
     .leaflet-edit-remove-active .leaflet-editing-icon,
     .leaflet-edit-remove-active .leaflet-touch-icon,
     .leaflet-edit-remove-active .leaflet-edit-resize,
@@ -230,19 +225,6 @@
       });
       map.addControl(drawControl);
 
-      // 「Clear All」ボタンのイベント無効化
-      function disableClearAllBtn() {
-        document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action').forEach(li => {
-          const t = li.getAttribute('title') || '';
-          if (t.includes('Clear') || t.includes('全削除') || t.includes('クリア')) {
-            li.style.pointerEvents = 'none';
-            li.style.opacity = '0.5';
-            li.style.filter = 'grayscale(1)';
-            li.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); return false; }, true);
-          }
-        });
-      }
-
       // 削除ボタンカスタマイズ
       function customizeRemoveBtn() {
         const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
@@ -255,7 +237,15 @@
             `;
           }
         }
-        disableClearAllBtn();
+        // 「Clear All」ボタンを完全に削除
+        document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action').forEach(li => {
+          const t = li.getAttribute('title') || '';
+          if (t.includes('Clear') || t.includes('全削除') || t.includes('クリア')) {
+            li.parentNode.removeChild(li);
+          }
+        });
+
+        // 削除モード時は編集用ドットを非表示
         const mapContainer = document.getElementById('map');
         if (mapContainer) {
           mapContainer.classList.add('leaflet-edit-remove-active');
@@ -321,21 +311,6 @@
             const geojson = layer.toGeoJSON();
             const date = document.getElementById('date').value;
             const name = document.getElementById('name').value;
-            if (!date) {
-              alert("実施日を入力してください");
-              drawnItems.removeLayer(layer);
-              map.removeLayer(layer);
-              const restoredLayer = L.geoJSON(originalGeoJSON, {
-                style: polygonStyle,
-                onEachFeature: function(feature, l) {
-                  l.feature = feature;
-                  applyLayerBindings(l, feature);
-                  drawnItems.addLayer(l);
-                }
-              });
-              map._editingPolygon = null;
-              return;
-            }
             geojson.properties = geojson.properties || {};
             geojson.properties.id = layer.feature?.properties?.id;
             geojson.properties.date = date;
@@ -456,20 +431,6 @@
           let id = (layer.feature && layer.feature.properties && layer.feature.properties.id) || geojson.properties && geojson.properties.id;
           const date = document.getElementById("date").value;
           const name = document.getElementById("name").value;
-          if (!date) {
-            alert("実施日を入力してください");
-            drawnItems.removeLayer(layer);
-            map.removeLayer(layer);
-            const restoredLayer = L.geoJSON(originalGeoJSON, {
-              style: polygonStyle,
-              onEachFeature: function(feature, l) {
-                l.feature = feature;
-                applyLayerBindings(l, feature);
-                drawnItems.addLayer(l);
-              }
-            });
-            return;
-          }
           geojson.properties = geojson.properties || {};
           geojson.properties.id = id;
           geojson.properties.date = date;
