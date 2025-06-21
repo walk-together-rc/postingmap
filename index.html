@@ -192,7 +192,6 @@
       L.drawLocal.edit.handlers.remove.tooltip.subtext = 'もう一度クリックで削除を解除';
     }
 
-    // 地図初期化
     let map;
     let drawnItems;
     function initMap() {
@@ -257,7 +256,6 @@
           }
         }
         disableClearAllBtn();
-        // 削除モード時は編集用ドットを非表示
         const mapContainer = document.getElementById('map');
         if (mapContainer) {
           mapContainer.classList.add('leaflet-edit-remove-active');
@@ -275,7 +273,6 @@
       map.on('draw:editstop', clearRemoveActive);
       map.on('draw:deletestop', clearRemoveActive);
 
-      // 吹き出し＆編集
       function bindPolygonInfo(layer, date, name) {
         let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
         layer.unbindPopup && layer.unbindPopup();
@@ -298,11 +295,16 @@
         }
       }
 
-      // 編集モード
       function startEditMode(layer) {
         if (map._editingPolygon) return;
-        // 編集前のジオメトリとプロパティを保存
-        const originalGeoJSON = layer.toGeoJSON();
+        // 編集前にfeatureをdeepコピー
+        const originalGeoJSON = layer.feature
+          ? {
+              type: layer.feature.type,
+              geometry: JSON.parse(JSON.stringify(layer.feature.geometry)),
+              properties: JSON.parse(JSON.stringify(layer.feature.properties))
+            }
+          : layer.toGeoJSON();
         map._editingPolygon = layer;
         const editLayerGroup = new L.FeatureGroup();
         editLayerGroup.addLayer(layer);
@@ -321,21 +323,15 @@
             const name = document.getElementById('name').value;
             if (!date) {
               alert("実施日を入力してください");
-              // 編集内容を元に戻す（図形を消して再描画）
-              // まず編集レイヤーを消す
               drawnItems.removeLayer(layer);
               map.removeLayer(layer);
-              // 元のジオメトリでレイヤーを再生成
-              const restoredLayer = L.geoJSON(originalGeoJSON, { style: polygonStyle });
-              restoredLayer.eachLayer(function(l) {
-                // feature情報を再現
-                l.feature = {
-                  type: originalGeoJSON.type,
-                  geometry: originalGeoJSON.geometry,
-                  properties: originalGeoJSON.properties
-                };
-                applyLayerBindings(l, originalGeoJSON);
-                drawnItems.addLayer(l);
+              const restoredLayer = L.geoJSON(originalGeoJSON, {
+                style: polygonStyle,
+                onEachFeature: function(feature, l) {
+                  l.feature = feature;
+                  applyLayerBindings(l, feature);
+                  drawnItems.addLayer(l);
+                }
               });
               map._editingPolygon = null;
               return;
@@ -354,11 +350,11 @@
                 polygon: geojson
               })
             }).then(() => {
-              // feature情報を上書き
-              layer.feature = layer.feature || {};
-              layer.feature.type = geojson.type;
-              layer.feature.geometry = geojson.geometry;
-              layer.feature.properties = geojson.properties;
+              layer.feature = {
+                type: geojson.type,
+                geometry: geojson.geometry,
+                properties: geojson.properties
+              };
             });
           }
           map.off(isTouch() ? 'touchstart' : 'click', finishEdit);
@@ -379,7 +375,6 @@
         bindPolygonInfo(layer, date, name);
       }
 
-      // ページ表示時に全図形取得して描画
       function loadAllPolygons() {
         fetch('http://localhost:3001/api/polygons')
           .then(res => res.json())
@@ -393,15 +388,13 @@
                 geojson.geometry.type === "Polygon" &&
                 Array.isArray(geojson.geometry.coordinates)
               ) {
-                L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
-                  // featureを必ず付与（編集・リロード時の欠損対策）
-                  layer.feature = {
-                    type: geojson.type,
-                    geometry: geojson.geometry,
-                    properties: geojson.properties
-                  };
-                  applyLayerBindings(layer, geojson);
-                  drawnItems.addLayer(layer);
+                L.geoJSON(geojson, {
+                  style: polygonStyle,
+                  onEachFeature: function(feature, layer) {
+                    layer.feature = feature;
+                    applyLayerBindings(layer, feature);
+                    drawnItems.addLayer(layer);
+                  }
                 });
               }
             });
@@ -409,7 +402,6 @@
       }
       loadAllPolygons();
 
-      // 図形新規作成
       map.on(L.Draw.Event.CREATED, function (e) {
         const layer = e.layer;
         layer.setStyle && layer.setStyle(polygonStyle);
@@ -432,12 +424,17 @@
         }).then(res => res.json())
           .then(json => {
             if (json.status === 'ok' && json.id) {
-              layer.feature = layer.feature || {};
-              layer.feature.properties = layer.feature.properties || {};
-              layer.feature.properties.id = json.id;
-              layer.feature.properties.date = date;
-              layer.feature.properties.name = name;
-              applyLayerBindings(layer, { properties: { id: json.id, date, name } });
+              let geojson = layer.toGeoJSON();
+              geojson.properties = geojson.properties || {};
+              geojson.properties.id = json.id;
+              geojson.properties.date = date;
+              geojson.properties.name = name;
+              layer.feature = {
+                type: geojson.type,
+                geometry: geojson.geometry,
+                properties: geojson.properties
+              };
+              applyLayerBindings(layer, layer.feature);
             } else {
               alert('保存に失敗しました: ' + (json.error || ''));
               drawnItems.removeLayer(layer);
@@ -445,11 +442,8 @@
           });
       });
 
-      // 編集時も保存
       map.on('draw:edited', function (e) {
-        // 編集した各layerについて…
         e.layers.eachLayer(function (layer) {
-          // 編集前の情報を保存
           const originalGeoJSON = layer.feature
             ? {
                 type: layer.feature.type,
@@ -459,24 +453,20 @@
             : layer.toGeoJSON();
 
           let geojson = layer.toGeoJSON();
-          let id = geojson.properties && geojson.properties.id;
+          let id = (layer.feature && layer.feature.properties && layer.feature.properties.id) || geojson.properties && geojson.properties.id;
           const date = document.getElementById("date").value;
           const name = document.getElementById("name").value;
           if (!date) {
             alert("実施日を入力してください");
-            // 編集内容を元に戻す
             drawnItems.removeLayer(layer);
             map.removeLayer(layer);
-            // 元のジオメトリでレイヤーを再生成
-            const restoredLayer = L.geoJSON(originalGeoJSON, { style: polygonStyle });
-            restoredLayer.eachLayer(function(l) {
-              l.feature = {
-                type: originalGeoJSON.type,
-                geometry: originalGeoJSON.geometry,
-                properties: originalGeoJSON.properties
-              };
-              applyLayerBindings(l, originalGeoJSON);
-              drawnItems.addLayer(l);
+            const restoredLayer = L.geoJSON(originalGeoJSON, {
+              style: polygonStyle,
+              onEachFeature: function(feature, l) {
+                l.feature = feature;
+                applyLayerBindings(l, feature);
+                drawnItems.addLayer(l);
+              }
             });
             return;
           }
@@ -494,16 +484,15 @@
               polygon: geojson
             })
           }).then(() => {
-            // featureを必ず上書き（リロード時の欠損対策）
-            layer.feature = layer.feature || {};
-            layer.feature.type = geojson.type;
-            layer.feature.geometry = geojson.geometry;
-            layer.feature.properties = geojson.properties;
+            layer.feature = {
+              type: geojson.type,
+              geometry: geojson.geometry,
+              properties: geojson.properties
+            };
           });
         });
       });
 
-      // 削除イベント
       map.on('draw:deleted', function (e) {
         let ids = [];
         let layersToRemove = [];
