@@ -37,7 +37,6 @@
     }
     #name { width: 170px; min-width: 120px; max-width: 220px; box-sizing: border-box; }
 
-    /* ？マークをform白地エリア右端中央に設置 */
     .custom-help-container {
       position: absolute;
       right: 14px;
@@ -129,7 +128,6 @@
       flex: 1 1 auto; min-height: 350px; width: 100vw; height: 70vh; max-height: 100dvh; z-index: 1;
       display: block;
     }
-    /* 編集モード時のドット（ハンドル）を小さく */
     .leaflet-editing-icon, .leaflet-touch-icon,
     .leaflet-edit-resize, .leaflet-edit-move {
       width: 4px !important;
@@ -138,7 +136,6 @@
       margin-top: -2px !important;
       border-width: 2px !important;
     }
-    /* 削除モード時は編集用ドットを非表示 */
     .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-editing-icon,
     .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-touch-icon,
     .leaflet-draw-toolbar .leaflet-draw-edit-remove.active ~ .leaflet-draw-actions ~ .leaflet-pane .leaflet-edit-resize,
@@ -165,7 +162,6 @@
     <label for="name">名前（任意）
       <input type="text" id="name" style="font-size:16px;" inputmode="text" />
     </label>
-    <!-- ？マークをform内右端中央に移動 -->
     <span class="custom-help-container" id="customHelpContainer">
       <button class="custom-help-btn" id="customHelpBtn" title="操作方法">？</button>
       <div class="custom-help-balloon" id="customHelpBalloon">
@@ -233,7 +229,6 @@
       });
       map.addControl(drawControl);
 
-      // 「Clear All」ボタン非表示/削除
       function customizeRemoveBtn() {
         const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
         if (toolbar) {
@@ -252,7 +247,6 @@
           }
         });
 
-        // 削除モード時は編集用ドットを非表示
         const mapContainer = document.getElementById('map');
         if (mapContainer) {
           mapContainer.classList.add('leaflet-edit-remove-active');
@@ -270,7 +264,6 @@
       map.on('draw:editstop', clearRemoveActive);
       map.on('draw:deletestop', clearRemoveActive);
 
-      // 吹き出し＆編集
       function bindPolygonInfo(layer, date, name) {
         let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
         layer.unbindPopup && layer.unbindPopup();
@@ -309,8 +302,12 @@
           editLayerGroup.clearLayers();
           if (layer.toGeoJSON) {
             const geojson = layer.toGeoJSON();
-            const date = geojson.properties && geojson.properties.date || document.getElementById('date').value;
-            const name = geojson.properties && geojson.properties.name || document.getElementById('name').value;
+            const date = document.getElementById('date').value;
+            const name = document.getElementById('name').value;
+            geojson.properties = geojson.properties || {};
+            geojson.properties.id = layer.feature?.properties?.id;
+            geojson.properties.date = date;
+            geojson.properties.name = name;
             fetch('http://localhost:3001/api/update', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -400,13 +397,18 @@
           });
       });
 
-      // 編集時も保存
+      // 編集時も保存（ここを修正！）
       map.on('draw:edited', function (e) {
         e.layers.eachLayer(function (layer) {
           let geojson = layer.toGeoJSON();
           let id = geojson.properties && geojson.properties.id;
-          const date = geojson.properties && geojson.properties.date || document.getElementById("date").value;
-          const name = geojson.properties && geojson.properties.name || document.getElementById("name").value;
+          const date = document.getElementById("date").value;
+          const name = document.getElementById("name").value;
+          // <--- ここで必ずプロパティにdate/name/idをセットする
+          geojson.properties = geojson.properties || {};
+          geojson.properties.id = id;
+          geojson.properties.date = date;
+          geojson.properties.name = name;
           fetch('http://localhost:3001/api/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -420,7 +422,7 @@
         });
       });
 
-      // 削除イベント（draw:deleted）でサーバー側も一括削除＆地図から即時消す
+      // 削除イベント
       map.on('draw:deleted', function (e) {
         let ids = [];
         let layersToRemove = [];
