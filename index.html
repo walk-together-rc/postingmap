@@ -9,7 +9,7 @@
   <style>
     html, body { height: 100%; margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: sans-serif; margin: 0; padding: 0; height: 100dvh; min-height: 100dvh; background: #fff; display: flex; flex-direction: column; }
-    h1 { background-color: #e4007f; color: white; padding: 12px 10px 10px 10px; margin: 0; font-size: 1.3em; letter-spacing: 0.05em; }
+    h1 { background-color: #e4007f; color: white; padding: 12px 10px 10px 10px; margin: 0; font-size: 1.3em; letter-spacing: 0.05em; position: relative; }
 
     #form {
       padding: 10px; background-color: #f9f9f9; border-bottom: 1px solid #ccc;
@@ -37,14 +37,12 @@
     }
     #name { width: 170px; min-width: 120px; max-width: 220px; box-sizing: border-box; }
 
-    /* ？マークを画面右端＋フォーム中央高さに */
+    /* ？マークを画面右端＋h1中央高さに修正 */
     .custom-help-container {
-      position: fixed;
-      right: 12px;
-      /* 高さをform中央に合わせる */
-      top: calc(10px + 0.5 * (48px)); /* 10px(フォームpadding) + 0.5*フォーム本体高さ */
-      /* フォーム高さはlabel/input・ボタンなど含め約48pxが一般的 */
-      transform: translateY(0);
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
       display: flex;
       flex-direction: column;
       align-items: flex-end;
@@ -52,6 +50,10 @@
       z-index: 2000;
       height: 40px;
       margin: 0;
+    }
+    /* h1にrelativeを指定してabsolute配置を親基準に */
+    h1 {
+      position: relative;
     }
     @media (max-width: 900px) {
       #form label { min-width: 100px; max-width: 170px; }
@@ -78,11 +80,11 @@
         font-size: 16px !important;
         width: 156px; min-width: 117px; max-width: 221px;
       }
+      /* 画面幅600px以下でもh1内右端中央位置を維持 */
       .custom-help-container {
-        top: calc(6px + 0.5 * 48px); /* 6px=padding, 48px=form高さ目安 */
-        right: 12px;
-        left: auto;
-        bottom: auto;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
       }
     }
     @media (max-width: 400px) {
@@ -90,7 +92,9 @@
       #form input[type="date"] { width: 105px; min-width: 80px; max-width: 143px; }
       #form input[type="text"], #name { width: 91px; min-width: 78px; max-width: 143px; }
       .custom-help-container {
-        top: calc(3px + 0.5 * 44px);
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
       }
     }
 
@@ -157,15 +161,10 @@
   </style>
 </head>
 <body>
-  <h1>一致団結ポスティングマップ</h1>
-  <div id="form">
-    <label for="date">実施日（必須）
-      <input type="date" id="date" required />
-    </label>
-    <label for="name">名前（任意）
-      <input type="text" id="name" style="font-size:16px;" inputmode="text" />
-    </label>
-    <div class="custom-help-container" id="customHelpContainer">
+  <h1>
+    一致団結ポスティングマップ
+    <!-- ？マークを赤×と同じ右端・中央に移動 -->
+    <span class="custom-help-container" id="customHelpContainer">
       <button class="custom-help-btn" id="customHelpBtn" title="操作方法">？</button>
       <div class="custom-help-balloon" id="customHelpBalloon">
         ＜操作方法＞<br>
@@ -178,7 +177,15 @@
         ■図形の削除<br>
         削除ボタン→図形選択→Saveボタン
       </div>
-    </div>
+    </span>
+  </h1>
+  <div id="form">
+    <label for="date">実施日（必須）
+      <input type="date" id="date" required />
+    </label>
+    <label for="name">名前（任意）
+      <input type="text" id="name" style="font-size:16px;" inputmode="text" />
+    </label>
   </div>
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
