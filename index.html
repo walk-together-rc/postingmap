@@ -41,8 +41,8 @@
       background: #e4007f;
       border-color: #e4007f;
     }
-    /* 削除ツールバーの「Clear All」非表示 */
-    .leaflet-draw-actions li.leaflet-draw-action[title*="Clear All"],
+    /* 削除モードの「Clear All」ボタンのみ非表示 */
+    .leaflet-draw-actions li.leaflet-draw-action[title*="Clear"],
     .leaflet-draw-actions li.leaflet-draw-action[title*="全削除"],
     .leaflet-draw-actions li.leaflet-draw-action[title*="クリア"] {
       display: none !important;
@@ -155,12 +155,14 @@
       const actions = document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action');
       actions.forEach(li => {
         const t = li.getAttribute('title') || '';
-        if (t.includes('Clear All') || t.includes('全削除') || t.includes('クリア')) {
-          li.style.display = 'none';
+        if (t.includes('Clear') || t.includes('全削除') || t.includes('クリア')) {
+          li.parentNode.removeChild(li);
         }
       });
     }
     setTimeout(customizeRemoveBtn, 500);
+    map.on('draw:editstart', customizeRemoveBtn);
+    map.on('draw:deletestart', customizeRemoveBtn);
 
     // ---- ここから吹き出し＆編集仕様 ----
     function bindPolygonInfo(layer, date, name) {
