@@ -119,17 +119,11 @@
       background: #e4007f;
       border-color: #e4007f;
     }
-    /* Clear All/全削除/クリアボタンを完全非表示 */
-    .leaflet-draw-actions li.leaflet-draw-action[title*="Clear"],
-    .leaflet-draw-actions li.leaflet-draw-action[title*="全削除"],
-    .leaflet-draw-actions li.leaflet-draw-action[title*="クリア"] {
-      display: none !important;
-    }
+    /* Clear All/全削除/クリアボタンを表示したままにする（JSで動作上書き） */
     #map {
       flex: 1 1 auto; min-height: 350px; width: 100vw; height: 70vh; max-height: 100dvh; z-index: 1;
       display: block;
     }
-    /* 編集モード時のドット（ハンドル）を小さく */
     .leaflet-editing-icon, .leaflet-touch-icon,
     .leaflet-edit-resize, .leaflet-edit-move {
       width: 4px !important;
@@ -138,7 +132,6 @@
       margin-top: -2px !important;
       border-width: 2px !important;
     }
-    /* 削除モード時は編集用ドットを完全非表示 */
     .leaflet-edit-remove-active .leaflet-editing-icon,
     .leaflet-edit-remove-active .leaflet-touch-icon,
     .leaflet-edit-remove-active .leaflet-edit-resize,
@@ -225,7 +218,7 @@
       });
       map.addControl(drawControl);
 
-      // 削除ボタンカスタマイズ
+      // 削除ボタンカスタマイズ＋Clear Allの動作上書き
       function customizeRemoveBtn() {
         const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
         if (toolbar) {
@@ -237,11 +230,18 @@
             `;
           }
         }
-        // 「Clear All」ボタンを完全に削除
+        // Clear All/全削除ボタンの動作上書き
         document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action').forEach(li => {
           const t = li.getAttribute('title') || '';
           if (t.includes('Clear') || t.includes('全削除') || t.includes('クリア')) {
-            li.parentNode.removeChild(li);
+            li.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              alert('この機能は使えません');
+              // 再描画（消えた図形を復活）
+              loadAllPolygons();
+              return false;
+            });
           }
         });
 
