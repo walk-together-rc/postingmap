@@ -10,42 +10,48 @@
     html, body { height: 100%; margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: sans-serif; margin: 0; padding: 0; height: 100dvh; min-height: 100dvh; background: #fff; display: flex; flex-direction: column; }
     h1 { background-color: #e4007f; color: white; padding: 12px 10px 10px 10px; margin: 0; font-size: 1.3em; letter-spacing: 0.05em; }
-    #form { 
-      padding: 10px; background-color: #f9f9f9; border-bottom: 1px solid #ccc; 
-      display: flex; gap: 1rem; align-items: center; font-size: 0.95em; 
-      flex-wrap: wrap; position: relative; z-index: 1002; 
+    #form {
+      padding: 10px; background-color: #f9f9f9; border-bottom: 1px solid #ccc;
+      display: flex; gap: 1rem; align-items: center; font-size: 0.95em;
+      flex-wrap: wrap; position: relative; z-index: 1002;
     }
-    #form label { 
-      display: flex; flex-direction: column; font-weight: bold; 
-      min-width: 120px; margin-bottom: 4px; font-size: 1em; cursor: pointer;
-      flex: 1 0 140px;
-      max-width: 180px;
+    #form label {
+      display: flex; flex-direction: column; font-weight: bold;
+      margin-bottom: 4px; font-size: 1em; cursor: pointer;
     }
-    #form input[type="date"],
+    #form label[for="date"] {
+      min-width: 140px;
+      max-width: 200px;
+      flex: 0 0 auto;
+    }
+    #form label[for="name"] {
+      min-width: 100px;
+      max-width: 140px;
+      flex: 0 0 auto;
+    }
+    #form input[type="date"] {
+      margin-top: 4px; padding: 4px; font-size: 0.95em;
+      border: 1px solid #ccc; border-radius: 4px;
+      width: 130px;
+      min-width: 110px;
+      max-width: 200px;
+      box-sizing: border-box;
+    }
     #form input[type="text"] {
       margin-top: 4px; padding: 4px; font-size: 0.95em;
-      border: 1px solid #ccc; border-radius: 4px; min-width: 90px; box-sizing: border-box;
-      width: 100%;
-      max-width: 180px;
+      border: 1px solid #ccc; border-radius: 4px;
+      width: 110px;
+      min-width: 80px;
+      max-width: 140px;
+      box-sizing: border-box;
     }
-    #name { width: 100%; max-width: 180px; box-sizing: border-box; }
-    @media (max-width: 600px) {
-      #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
-      #form label { min-width: 90px; font-size: 0.95em; max-width: 120px; }
-      #form input { font-size: 16px !important; min-width: 70px; max-width: 120px; }
-      #name { max-width: 120px; }
-      .custom-help-btn { width: 28px; height: 28px; font-size: 18px; line-height: 24px; }
-      .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
-      .custom-help-balloon:before { right: 16px; }
-      .custom-help-balloon:after { right: 18px; }
-      .leaflet-draw-toolbar .leaflet-draw-remove { width: 28px; height: 28px; }
-      .leaflet-draw-toolbar .leaflet-draw-remove svg { width: 17px; height: 17px; }
+    #name { width: 110px; min-width: 80px; max-width: 140px; box-sizing: border-box; }
+    #map {
+      flex: 1 1 auto; min-height: 350px; width: 100vw; height: 70vh; max-height: 100dvh; z-index: 1;
+      /* 地図が親のflexで縮んでしまうのを防ぐ */
+      display: block;
     }
-    @media (max-width: 400px) {
-      #form label { min-width: 70px; font-size: 0.9em; max-width: 90px; }
-      #form input, #name { max-width: 90px; }
-    }
-    .custom-help-container { 
+    .custom-help-container {
       position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
       z-index: 1003; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none;
     }
@@ -79,9 +85,10 @@
     }
     @media (max-width: 600px) {
       #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
-      #form label { min-width: 90px; font-size: 0.95em; max-width: 120px; }
-      #form input { font-size: 16px !important; min-width: 70px; max-width: 120px; }
-      #name { max-width: 120px; }
+      #form label[for="date"] { min-width: 122px; max-width: 170px; }
+      #form label[for="name"] { min-width: 80px; max-width: 110px; }
+      #form input[type="date"] { font-size: 16px !important; min-width: 108px; width: 122px; max-width: 170px; }
+      #form input[type="text"], #name { font-size: 16px !important; min-width: 78px; width: 80px; max-width: 110px; }
       .custom-help-btn { width: 28px; height: 28px; font-size: 18px; line-height: 24px; }
       .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
       .custom-help-balloon:before { right: 16px; }
@@ -90,8 +97,10 @@
       .leaflet-draw-toolbar .leaflet-draw-remove svg { width: 17px; height: 17px; }
     }
     @media (max-width: 400px) {
-      #form label { min-width: 70px; font-size: 0.9em; max-width: 90px; }
-      #form input, #name { max-width: 90px; }
+      #form label[for="date"] { min-width: 80px; max-width: 100px; }
+      #form label[for="name"] { min-width: 50px; max-width: 70px; }
+      #form input[type="date"] { min-width: 70px; width: 80px; max-width: 100px; }
+      #form input[type="text"], #name { min-width: 45px; width: 50px; max-width: 70px; }
     }
     .leaflet-draw-toolbar .leaflet-draw-edit-edit { display: none !important; }
   </style>
@@ -99,7 +108,7 @@
 <body>
   <h1>一致団結ポスティングマップ</h1>
   <div id="form">
-    <label for="date" id="date-label">実施日（必須）
+    <label for="date">実施日（必須）
       <input type="date" id="date" required />
     </label>
     <label for="name">名前（任意）
@@ -134,248 +143,257 @@
     }
 
     // 地図初期化
-    const map = L.map('map', { tap: false }).setView([35.6996, 139.7652], 13);
-    window.map = map;
-    const drawnItems = new L.FeatureGroup().addTo(map);
+    let map;
+    let drawnItems;
+    function initMap() {
+      map = L.map('map', { tap: false }).setView([35.6996, 139.7652], 13);
+      window.map = map;
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+      drawnItems = new L.FeatureGroup().addTo(map);
 
-    // ポリゴン基本style
-    const polygonStyle = {
-      color: "#e4007f",
-      fillColor: "#e4007f",
-      fillOpacity: 0.4
-    };
+      const polygonStyle = {
+        color: "#e4007f",
+        fillColor: "#e4007f",
+        fillOpacity: 0.4
+      };
 
-    // ポリゴン描画ボタン＋削除ボタンのみ表示
-    const drawControl = new L.Control.Draw({
-      position: 'topleft',
-      edit: { featureGroup: drawnItems, edit: false, remove: true },
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          showArea: true,
-          shapeOptions: polygonStyle,
-          icon: new L.DivIcon({
-            iconSize: new L.Point(6, 6),
-            className: 'leaflet-div-icon'
-          })
-        },
-        polyline: false,
-        rectangle: false,
-        circle: false,
-        marker: false,
-        circlemarker: false
-      }
-    });
-    map.addControl(drawControl);
-
-    // 「Clear All」ボタンを非表示/削除(PC・スマホ両対応)
-    function customizeRemoveBtn() {
-      const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
-      if (toolbar) {
-        let removeBtn = toolbar.querySelector('.leaflet-draw-edit-remove');
-        if (removeBtn) {
-          removeBtn.classList.add('leaflet-draw-remove');
-          // SVGリセット
-          removeBtn.innerHTML = `
-          <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="#d32f2f"/></svg>
-          `;
-        }
-      }
-      // 「Clear All」アクションを非表示/削除
-      document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action').forEach(li => {
-        const t = li.getAttribute('title') || '';
-        if (t.includes('Clear') || t.includes('全削除') || t.includes('クリア')) {
-          li.parentNode.removeChild(li);
+      const drawControl = new L.Control.Draw({
+        position: 'topleft',
+        edit: { featureGroup: drawnItems, edit: false, remove: true },
+        draw: {
+          polygon: {
+            allowIntersection: false,
+            showArea: true,
+            shapeOptions: polygonStyle,
+            icon: new L.DivIcon({
+              iconSize: new L.Point(6, 6),
+              className: 'leaflet-div-icon'
+            })
+          },
+          polyline: false,
+          rectangle: false,
+          circle: false,
+          marker: false,
+          circlemarker: false
         }
       });
-    }
-    setTimeout(customizeRemoveBtn, 500);
-    map.on('draw:editstart', customizeRemoveBtn);
-    map.on('draw:deletestart', customizeRemoveBtn);
+      map.addControl(drawControl);
 
-    // 吹き出し＆編集
-    function bindPolygonInfo(layer, date, name) {
-      let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
-      layer.unbindPopup && layer.unbindPopup();
-      layer.bindPopup(infoHtml, { closeButton: false });
-      layer.off();
-
-      const isTouch = 'ontouchstart' in window || window.matchMedia('(pointer: coarse)').matches;
-
-      if (isTouch) {
-        // スマホ：1タップで吹き出し＆編集
-        layer.on('click', function(e) {
-          layer.openPopup();
-          startEditMode(layer);
-        });
-      } else {
-        // PC：マウスオーバーで吹き出し、1クリックで編集
-        layer.on('mouseover', function(e) { layer.openPopup(); });
-        layer.on('mouseout', function(e) { layer.closePopup(); });
-        layer.on('click', function(e) {
-          startEditMode(layer);
+      // 「Clear All」ボタン非表示/削除
+      function customizeRemoveBtn() {
+        const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
+        if (toolbar) {
+          let removeBtn = toolbar.querySelector('.leaflet-draw-edit-remove');
+          if (removeBtn) {
+            removeBtn.classList.add('leaflet-draw-remove');
+            removeBtn.innerHTML = `
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="#d32f2f"/></svg>
+            `;
+          }
+        }
+        document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action').forEach(li => {
+          const t = li.getAttribute('title') || '';
+          if (t.includes('Clear') || t.includes('全削除') || t.includes('クリア')) {
+            li.parentNode.removeChild(li);
+          }
         });
       }
-    }
+      setTimeout(customizeRemoveBtn, 500);
+      map.on('draw:editstart', customizeRemoveBtn);
+      map.on('draw:deletestart', customizeRemoveBtn);
 
-    // 編集モード起動＆終了
-    function startEditMode(layer) {
-      if (map._editingPolygon) return;
-      map._editingPolygon = layer;
-      const editLayerGroup = new L.FeatureGroup();
-      editLayerGroup.addLayer(layer);
-      const editHandler = new L.EditToolbar.Edit(map, { featureGroup: editLayerGroup });
-      editHandler.enable();
+      // 吹き出し＆編集
+      function bindPolygonInfo(layer, date, name) {
+        let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
+        layer.unbindPopup && layer.unbindPopup();
+        layer.bindPopup(infoHtml, { closeButton: false });
+        layer.off();
 
-      function isTouch() {
-        return 'ontouchstart' in window || window.matchMedia('(pointer: coarse)').matches;
+        const isTouch = 'ontouchstart' in window || window.matchMedia('(pointer: coarse)').matches;
+
+        if (isTouch) {
+          layer.on('click', function(e) {
+            layer.openPopup();
+            startEditMode(layer);
+          });
+        } else {
+          layer.on('mouseover', function(e) { layer.openPopup(); });
+          layer.on('mouseout', function(e) { layer.closePopup(); });
+          layer.on('click', function(e) {
+            startEditMode(layer);
+          });
+        }
       }
-      function finishEdit(ev) {
-        editHandler.disable();
-        editLayerGroup.clearLayers();
-        if (layer.toGeoJSON) {
-          const geojson = layer.toGeoJSON();
-          const date = geojson.properties && geojson.properties.date || document.getElementById('date').value;
-          const name = geojson.properties && geojson.properties.name || document.getElementById('name').value;
+
+      function startEditMode(layer) {
+        if (map._editingPolygon) return;
+        map._editingPolygon = layer;
+        const editLayerGroup = new L.FeatureGroup();
+        editLayerGroup.addLayer(layer);
+        const editHandler = new L.EditToolbar.Edit(map, { featureGroup: editLayerGroup });
+        editHandler.enable();
+
+        function isTouch() {
+          return 'ontouchstart' in window || window.matchMedia('(pointer: coarse)').matches;
+        }
+        function finishEdit(ev) {
+          editHandler.disable();
+          editLayerGroup.clearLayers();
+          if (layer.toGeoJSON) {
+            const geojson = layer.toGeoJSON();
+            const date = geojson.properties && geojson.properties.date || document.getElementById('date').value;
+            const name = geojson.properties && geojson.properties.name || document.getElementById('name').value;
+            fetch('http://localhost:3001/api/update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: layer.feature?.properties?.id,
+                date,
+                name,
+                polygon: geojson
+              })
+            });
+          }
+          map.off(isTouch() ? 'touchstart' : 'click', finishEdit);
+          map._editingPolygon = null;
+        }
+        setTimeout(() => {
+          map.once(isTouch() ? 'touchstart' : 'click', function(ev) {
+            if (!ev.originalEvent || !ev.originalEvent.target.closest('.leaflet-interactive')) {
+              finishEdit(ev);
+            }
+          });
+        }, 100);
+      }
+
+      function applyLayerBindings(layer, geojson) {
+        const date = geojson.properties && geojson.properties.date;
+        const name = geojson.properties && geojson.properties.name;
+        bindPolygonInfo(layer, date, name);
+      }
+
+      // ページ表示時に全ポリゴン取得して描画
+      function loadAllPolygons() {
+        fetch('http://localhost:3001/api/polygons')
+          .then(res => res.json())
+          .then(polygons => {
+            drawnItems.clearLayers();
+            polygons.forEach(geojson => {
+              if (
+                geojson &&
+                geojson.type === "Feature" &&
+                geojson.geometry &&
+                geojson.geometry.type === "Polygon" &&
+                Array.isArray(geojson.geometry.coordinates)
+              ) {
+                L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
+                  applyLayerBindings(layer, geojson);
+                  drawnItems.addLayer(layer);
+                });
+              }
+            });
+          });
+      }
+      loadAllPolygons();
+
+      // ポリゴン新規作成
+      map.on(L.Draw.Event.CREATED, function (e) {
+        const layer = e.layer;
+        layer.setStyle && layer.setStyle(polygonStyle);
+        drawnItems.addLayer(layer);
+        const date = document.getElementById("date").value;
+        const name = document.getElementById("name").value;
+        if (!date) {
+          alert("実施日を入力してください");
+          drawnItems.removeLayer(layer);
+          return;
+        }
+        fetch('http://localhost:3001/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date,
+            name,
+            polygon: layer.toGeoJSON()
+          })
+        }).then(res => res.json())
+          .then(json => {
+            if (json.status === 'ok' && json.id) {
+              layer.feature = layer.feature || {};
+              layer.feature.properties = layer.feature.properties || {};
+              layer.feature.properties.id = json.id;
+              layer.feature.properties.date = date;
+              layer.feature.properties.name = name;
+              applyLayerBindings(layer, { properties: { id: json.id, date, name } });
+            } else {
+              alert('保存に失敗しました: ' + (json.error || ''));
+              drawnItems.removeLayer(layer);
+            }
+          });
+      });
+
+      // 編集時も保存
+      map.on('draw:edited', function (e) {
+        e.layers.eachLayer(function (layer) {
+          let geojson = layer.toGeoJSON();
+          let id = geojson.properties && geojson.properties.id;
+          const date = geojson.properties && geojson.properties.date || document.getElementById("date").value;
+          const name = geojson.properties && geojson.properties.name || document.getElementById("name").value;
           fetch('http://localhost:3001/api/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              id: layer.feature?.properties?.id,
+              id: id,
               date,
               name,
               polygon: geojson
             })
           });
-        }
-        map.off(isTouch() ? 'touchstart' : 'click', finishEdit);
-        map._editingPolygon = null;
-      }
-      setTimeout(() => {
-        map.once(isTouch() ? 'touchstart' : 'click', function(ev) {
-          if (!ev.originalEvent || !ev.originalEvent.target.closest('.leaflet-interactive')) {
-            finishEdit(ev);
+        });
+      });
+
+      // 削除イベント（draw:deleted）でサーバー側も一括削除＆地図から即時消す
+      map.on('draw:deleted', function (e) {
+        let ids = [];
+        let layersToRemove = [];
+        e.layers.eachLayer(function (layer) {
+          let geojson = layer.toGeoJSON();
+          let id = geojson.properties && geojson.properties.id;
+          if (id) {
+            ids.push(id);
           }
+          layersToRemove.push(layer);
         });
-      }, 100);
-    }
-
-    function applyLayerBindings(layer, geojson) {
-      const date = geojson.properties && geojson.properties.date;
-      const name = geojson.properties && geojson.properties.name;
-      bindPolygonInfo(layer, date, name);
-    }
-
-    // ページ表示時に全ポリゴン取得して描画
-    window.addEventListener('DOMContentLoaded', function() {
-      fetch('http://localhost:3001/api/polygons')
-        .then(res => res.json())
-        .then(polygons => {
-          drawnItems.clearLayers();
-          polygons.forEach(geojson => {
-            if (
-              geojson &&
-              geojson.type === "Feature" &&
-              geojson.geometry &&
-              geojson.geometry.type === "Polygon" &&
-              Array.isArray(geojson.geometry.coordinates)
-            ) {
-              L.geoJSON(geojson, { style: polygonStyle }).eachLayer(layer => {
-                applyLayerBindings(layer, geojson);
-                drawnItems.addLayer(layer);
-              });
-            }
-          });
+        layersToRemove.forEach(layer => {
+          drawnItems.removeLayer(layer);
+          map.removeLayer(layer);
         });
-    });
-
-    // ポリゴン新規作成
-    map.on(L.Draw.Event.CREATED, function (e) {
-      const layer = e.layer;
-      layer.setStyle && layer.setStyle(polygonStyle);
-      drawnItems.addLayer(layer);
-      const date = document.getElementById("date").value;
-      const name = document.getElementById("name").value;
-      if (!date) {
-        alert("実施日を入力してください");
-        drawnItems.removeLayer(layer);
-        return;
-      }
-      fetch('http://localhost:3001/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date,
-          name,
-          polygon: layer.toGeoJSON()
-        })
-      }).then(res => res.json())
-        .then(json => {
-          if (json.status === 'ok' && json.id) {
-            layer.feature = layer.feature || {};
-            layer.feature.properties = layer.feature.properties || {};
-            layer.feature.properties.id = json.id;
-            layer.feature.properties.date = date;
-            layer.feature.properties.name = name;
-            applyLayerBindings(layer, { properties: { id: json.id, date, name } });
-          } else {
-            alert('保存に失敗しました: ' + (json.error || ''));
-            drawnItems.removeLayer(layer);
-          }
-        });
-    });
-
-    // 編集時も保存
-    map.on('draw:edited', function (e) {
-      e.layers.eachLayer(function (layer) {
-        let geojson = layer.toGeoJSON();
-        let id = geojson.properties && geojson.properties.id;
-        const date = geojson.properties && geojson.properties.date || document.getElementById("date").value;
-        const name = geojson.properties && geojson.properties.name || document.getElementById("name").value;
-        fetch('http://localhost:3001/api/update', {
+        if (ids.length === 0) return;
+        fetch('http://localhost:3001/api/delete-multi', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: id,
-            date,
-            name,
-            polygon: geojson
+          body: JSON.stringify({ ids: ids })
+        }).then(res => res.json())
+          .then(result => {
+            if (!result.status || result.status !== "ok") {
+              alert('一部の削除に失敗しました');
+            }
+            // スマホで地図に消えない場合用に再読み込み
+            if ('ontouchstart' in window || window.matchMedia('(pointer: coarse)').matches) {
+              setTimeout(loadAllPolygons, 500);
+            }
           })
-        });
+          .catch(err => {
+            alert('削除処理でエラーが発生しました');
+          });
       });
-    });
+    }
 
-    // 削除イベント（draw:deleted）でサーバー側も一括削除＆地図から即時消す
-    map.on('draw:deleted', function (e) {
-      let ids = [];
-      let layersToRemove = [];
-      e.layers.eachLayer(function (layer) {
-        let geojson = layer.toGeoJSON();
-        let id = geojson.properties && geojson.properties.id;
-        if (id) {
-          ids.push(id);
-        }
-        // 地図から確実に消す
-        layersToRemove.push(layer);
-      });
-      layersToRemove.forEach(layer => {
-        drawnItems.removeLayer(layer);
-        map.removeLayer(layer);
-      });
-      if (ids.length === 0) return;
-      fetch('http://localhost:3001/api/delete-multi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: ids })
-      }).then(res => res.json())
-        .then(result => {
-          if (!result.status || result.status !== "ok") {
-            alert('一部の削除に失敗しました');
-          }
-        })
-        .catch(err => {
-          alert('削除処理でエラーが発生しました');
-        });
+    // DOMContentLoaded後に地図初期化
+    window.addEventListener('DOMContentLoaded', function() {
+      setTimeout(initMap, 0);
     });
 
     // ヘルプボタンのふきだし表示制御
