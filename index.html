@@ -122,7 +122,9 @@
     .leaflet-draw-actions li.leaflet-draw-action[title*="Clear"],
     .leaflet-draw-actions li.leaflet-draw-action[title*="全削除"],
     .leaflet-draw-actions li.leaflet-draw-action[title*="クリア"] {
-      display: none !important;
+      pointer-events: none !important;
+      opacity: 0.5 !important;
+      filter: grayscale(1);
     }
     #map {
       flex: 1 1 auto; min-height: 350px; width: 100vw; height: 70vh; max-height: 100dvh; z-index: 1;
@@ -229,6 +231,20 @@
       });
       map.addControl(drawControl);
 
+      // 「Clear All」ボタンのイベント無効化
+      function disableClearAllBtn() {
+        document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action').forEach(li => {
+          const t = li.getAttribute('title') || '';
+          if (t.includes('Clear') || t.includes('全削除') || t.includes('クリア')) {
+            li.style.pointerEvents = 'none';
+            li.style.opacity = '0.5';
+            li.style.filter = 'grayscale(1)';
+            li.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); return false; }, true);
+          }
+        });
+      }
+
+      // 削除ボタンカスタマイズ
       function customizeRemoveBtn() {
         const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
         if (toolbar) {
@@ -240,13 +256,8 @@
             `;
           }
         }
-        document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action').forEach(li => {
-          const t = li.getAttribute('title') || '';
-          if (t.includes('Clear') || t.includes('全削除') || t.includes('クリア')) {
-            li.parentNode.removeChild(li);
-          }
-        });
-
+        disableClearAllBtn();
+        // 削除モード時は編集用ドットを非表示
         const mapContainer = document.getElementById('map');
         if (mapContainer) {
           mapContainer.classList.add('leaflet-edit-remove-active');
@@ -264,6 +275,7 @@
       map.on('draw:editstop', clearRemoveActive);
       map.on('draw:deletestop', clearRemoveActive);
 
+      // 吹き出し＆編集
       function bindPolygonInfo(layer, date, name) {
         let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
         layer.unbindPopup && layer.unbindPopup();
@@ -286,8 +298,11 @@
         }
       }
 
+      // 編集モード
       function startEditMode(layer) {
         if (map._editingPolygon) return;
+        // 編集前のジオメトリとプロパティを保存
+        const originalGeoJSON = layer.toGeoJSON();
         map._editingPolygon = layer;
         const editLayerGroup = new L.FeatureGroup();
         editLayerGroup.addLayer(layer);
@@ -306,7 +321,22 @@
             const name = document.getElementById('name').value;
             if (!date) {
               alert("実施日を入力してください");
-              map.off(isTouch() ? 'touchstart' : 'click', finishEdit);
+              // 編集内容を元に戻す（図形を消して再描画）
+              // まず編集レイヤーを消す
+              drawnItems.removeLayer(layer);
+              map.removeLayer(layer);
+              // 元のジオメトリでレイヤーを再生成
+              const restoredLayer = L.geoJSON(originalGeoJSON, { style: polygonStyle });
+              restoredLayer.eachLayer(function(l) {
+                // feature情報を再現
+                l.feature = {
+                  type: originalGeoJSON.type,
+                  geometry: originalGeoJSON.geometry,
+                  properties: originalGeoJSON.properties
+                };
+                applyLayerBindings(l, originalGeoJSON);
+                drawnItems.addLayer(l);
+              });
               map._editingPolygon = null;
               return;
             }
@@ -324,7 +354,7 @@
                 polygon: geojson
               })
             }).then(() => {
-              // 必ずfeature情報を上書きしておく（リロード対策）
+              // feature情報を上書き
               layer.feature = layer.feature || {};
               layer.feature.type = geojson.type;
               layer.feature.geometry = geojson.geometry;
@@ -417,13 +447,37 @@
 
       // 編集時も保存
       map.on('draw:edited', function (e) {
+        // 編集した各layerについて…
         e.layers.eachLayer(function (layer) {
+          // 編集前の情報を保存
+          const originalGeoJSON = layer.feature
+            ? {
+                type: layer.feature.type,
+                geometry: JSON.parse(JSON.stringify(layer.feature.geometry)),
+                properties: JSON.parse(JSON.stringify(layer.feature.properties))
+              }
+            : layer.toGeoJSON();
+
           let geojson = layer.toGeoJSON();
           let id = geojson.properties && geojson.properties.id;
           const date = document.getElementById("date").value;
           const name = document.getElementById("name").value;
           if (!date) {
             alert("実施日を入力してください");
+            // 編集内容を元に戻す
+            drawnItems.removeLayer(layer);
+            map.removeLayer(layer);
+            // 元のジオメトリでレイヤーを再生成
+            const restoredLayer = L.geoJSON(originalGeoJSON, { style: polygonStyle });
+            restoredLayer.eachLayer(function(l) {
+              l.feature = {
+                type: originalGeoJSON.type,
+                geometry: originalGeoJSON.geometry,
+                properties: originalGeoJSON.properties
+              };
+              applyLayerBindings(l, originalGeoJSON);
+              drawnItems.addLayer(l);
+            });
             return;
           }
           geojson.properties = geojson.properties || {};
