@@ -10,15 +10,45 @@
     html, body { height: 100%; margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: sans-serif; margin: 0; padding: 0; height: 100dvh; min-height: 100dvh; background: #fff; display: flex; flex-direction: column; }
     h1 { background-color: #e4007f; color: white; padding: 12px 10px 10px 10px; margin: 0; font-size: 1.3em; letter-spacing: 0.05em; }
-    #form { padding: 10px; background-color: #f9f9f9; border-bottom: 1px solid #ccc; display: flex; gap: 1rem; align-items: center; font-size: 0.95em; flex-wrap: wrap; position: relative; z-index: 1002; }
-    #form label { display: flex; flex-direction: column; font-weight: bold; min-width: 120px; margin-bottom: 4px; font-size: 1em; cursor: pointer; }
-    #form input { margin-top: 4px; padding: 4px; font-size: 0.95em; border: 1px solid #ccc; border-radius: 4px; min-width: 90px; box-sizing: border-box; }
-    @media (max-width: 600px) {
-      #form input { font-size: 16px !important; }
+    #form { 
+      padding: 10px; background-color: #f9f9f9; border-bottom: 1px solid #ccc; 
+      display: flex; gap: 1rem; align-items: center; font-size: 0.95em; 
+      flex-wrap: wrap; position: relative; z-index: 1002; 
     }
-    #map { flex: 1 1 auto; height: 70vh; width: 100%; min-height: 350px; max-height: 100dvh; z-index: 1; }
-    .leaflet-div-icon { width: 6px !important; height: 6px !important; margin-left: -3px !important; margin-top: -3px !important; border-radius: 3px !important; border: 2px solid #e4007f !important; background: #fff !important; }
-    .custom-help-container { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); z-index: 1003; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
+    #form label { 
+      display: flex; flex-direction: column; font-weight: bold; 
+      min-width: 120px; margin-bottom: 4px; font-size: 1em; cursor: pointer;
+      flex: 1 0 140px;
+      max-width: 180px;
+    }
+    #form input[type="date"],
+    #form input[type="text"] {
+      margin-top: 4px; padding: 4px; font-size: 0.95em;
+      border: 1px solid #ccc; border-radius: 4px; min-width: 90px; box-sizing: border-box;
+      width: 100%;
+      max-width: 180px;
+    }
+    #name { width: 100%; max-width: 180px; box-sizing: border-box; }
+    @media (max-width: 600px) {
+      #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
+      #form label { min-width: 90px; font-size: 0.95em; max-width: 120px; }
+      #form input { font-size: 16px !important; min-width: 70px; max-width: 120px; }
+      #name { max-width: 120px; }
+      .custom-help-btn { width: 28px; height: 28px; font-size: 18px; line-height: 24px; }
+      .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
+      .custom-help-balloon:before { right: 16px; }
+      .custom-help-balloon:after { right: 18px; }
+      .leaflet-draw-toolbar .leaflet-draw-remove { width: 28px; height: 28px; }
+      .leaflet-draw-toolbar .leaflet-draw-remove svg { width: 17px; height: 17px; }
+    }
+    @media (max-width: 400px) {
+      #form label { min-width: 70px; font-size: 0.9em; max-width: 90px; }
+      #form input, #name { max-width: 90px; }
+    }
+    .custom-help-container { 
+      position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+      z-index: 1003; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none;
+    }
     .custom-help-btn { width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #e4007f; border: 2px solid #e4007f; font-size: 22px; font-weight: bold; text-align: center; line-height: 28px; box-shadow: 0 2px 6px rgba(60,64,67,0.12); cursor: pointer; user-select: none; pointer-events: auto; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
     .custom-help-btn:active, .custom-help-btn:focus { background: #e4007f; color: #fff; }
     .custom-help-balloon { position: absolute; top: 38px; right: 0; width: 270px; max-width: 70vw; background: #fff; color: #333; font-size: 1em; border: 1.5px solid #e4007f; border-radius: 7px; box-shadow: 0 2px 12px rgba(0,0,0,0.16); padding: 15px 14px 15px 18px; z-index: 1004; pointer-events: auto; word-break: break-word; line-height: 1.7; display: none; }
@@ -41,7 +71,7 @@
       background: #e4007f;
       border-color: #e4007f;
     }
-    /* 削除モードの「Clear All」ボタンのみ非表示 */
+    /* 削除時の「Clear All」ボタンのみ非表示 */
     .leaflet-draw-actions li.leaflet-draw-action[title*="Clear"],
     .leaflet-draw-actions li.leaflet-draw-action[title*="全削除"],
     .leaflet-draw-actions li.leaflet-draw-action[title*="クリア"] {
@@ -49,8 +79,9 @@
     }
     @media (max-width: 600px) {
       #form { padding: 6px 3vw 6px 3vw; gap: 0.4rem; font-size: 0.9em; }
-      #form label { min-width: 90px; font-size: 0.95em; }
-      #form input { font-size: 16px !important; min-width: 70px; }
+      #form label { min-width: 90px; font-size: 0.95em; max-width: 120px; }
+      #form input { font-size: 16px !important; min-width: 70px; max-width: 120px; }
+      #name { max-width: 120px; }
       .custom-help-btn { width: 28px; height: 28px; font-size: 18px; line-height: 24px; }
       .custom-help-balloon { width: 90vw; max-width: 95vw; font-size: 0.98em; right: 0; top: 32px; padding: 11px 8px 11px 13px; }
       .custom-help-balloon:before { right: 16px; }
@@ -59,7 +90,8 @@
       .leaflet-draw-toolbar .leaflet-draw-remove svg { width: 17px; height: 17px; }
     }
     @media (max-width: 400px) {
-      #form label { min-width: 70px; font-size: 0.9em; }
+      #form label { min-width: 70px; font-size: 0.9em; max-width: 90px; }
+      #form input, #name { max-width: 90px; }
     }
     .leaflet-draw-toolbar .leaflet-draw-edit-edit { display: none !important; }
   </style>
@@ -70,7 +102,7 @@
     <label for="date" id="date-label">実施日（必須）
       <input type="date" id="date" required />
     </label>
-    <label>名前（任意）
+    <label for="name">名前（任意）
       <input type="text" id="name" style="font-size:16px;" inputmode="text" />
     </label>
     <div class="custom-help-container" id="customHelpContainer">
@@ -103,10 +135,7 @@
 
     // 地図初期化
     const map = L.map('map', { tap: false }).setView([35.6996, 139.7652], 13);
-    window.map = map; // グローバルに
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    window.map = map;
     const drawnItems = new L.FeatureGroup().addTo(map);
 
     // ポリゴン基本style
@@ -139,21 +168,21 @@
     });
     map.addControl(drawControl);
 
-    // 削除ボタンのLeaflet DrawデフォルトUIの位置調整&SVG差し替え
+    // 「Clear All」ボタンを非表示/削除(PC・スマホ両対応)
     function customizeRemoveBtn() {
       const toolbar = document.querySelector('.leaflet-draw-toolbar-top');
-      if (!toolbar) return;
-      let removeBtn = toolbar.querySelector('.leaflet-draw-edit-remove');
-      if (removeBtn) {
-        removeBtn.classList.add('leaflet-draw-remove');
-        // SVGリセット
-        removeBtn.innerHTML = `
-        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="#d32f2f"/></svg>
-        `;
+      if (toolbar) {
+        let removeBtn = toolbar.querySelector('.leaflet-draw-edit-remove');
+        if (removeBtn) {
+          removeBtn.classList.add('leaflet-draw-remove');
+          // SVGリセット
+          removeBtn.innerHTML = `
+          <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="#d32f2f"/></svg>
+          `;
+        }
       }
-      // 「Clear All」アクションを非表示
-      const actions = document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action');
-      actions.forEach(li => {
+      // 「Clear All」アクションを非表示/削除
+      document.querySelectorAll('.leaflet-draw-actions li.leaflet-draw-action').forEach(li => {
         const t = li.getAttribute('title') || '';
         if (t.includes('Clear') || t.includes('全削除') || t.includes('クリア')) {
           li.parentNode.removeChild(li);
@@ -164,14 +193,13 @@
     map.on('draw:editstart', customizeRemoveBtn);
     map.on('draw:deletestart', customizeRemoveBtn);
 
-    // ---- ここから吹き出し＆編集仕様 ----
+    // 吹き出し＆編集
     function bindPolygonInfo(layer, date, name) {
       let infoHtml = `実施日: ${date || "(未入力)"}<br>名前: ${name || "(未入力)"}`;
       layer.unbindPopup && layer.unbindPopup();
       layer.bindPopup(infoHtml, { closeButton: false });
       layer.off();
 
-      // スマホ判定
       const isTouch = 'ontouchstart' in window || window.matchMedia('(pointer: coarse)').matches;
 
       if (isTouch) {
@@ -199,7 +227,6 @@
       const editHandler = new L.EditToolbar.Edit(map, { featureGroup: editLayerGroup });
       editHandler.enable();
 
-      // 図形以外クリック/タップで終了
       function isTouch() {
         return 'ontouchstart' in window || window.matchMedia('(pointer: coarse)').matches;
       }
@@ -226,7 +253,6 @@
       }
       setTimeout(() => {
         map.once(isTouch() ? 'touchstart' : 'click', function(ev) {
-          // 図形以外
           if (!ev.originalEvent || !ev.originalEvent.target.closest('.leaflet-interactive')) {
             finishEdit(ev);
           }
@@ -239,7 +265,6 @@
       const name = geojson.properties && geojson.properties.name;
       bindPolygonInfo(layer, date, name);
     }
-    // ---- ここまで ----
 
     // ページ表示時に全ポリゴン取得して描画
     window.addEventListener('DOMContentLoaded', function() {
@@ -320,15 +345,22 @@
       });
     });
 
-    // 削除イベント（draw:deleted）でサーバー側も一括削除
+    // 削除イベント（draw:deleted）でサーバー側も一括削除＆地図から即時消す
     map.on('draw:deleted', function (e) {
       let ids = [];
+      let layersToRemove = [];
       e.layers.eachLayer(function (layer) {
         let geojson = layer.toGeoJSON();
         let id = geojson.properties && geojson.properties.id;
         if (id) {
           ids.push(id);
         }
+        // 地図から確実に消す
+        layersToRemove.push(layer);
+      });
+      layersToRemove.forEach(layer => {
+        drawnItems.removeLayer(layer);
+        map.removeLayer(layer);
       });
       if (ids.length === 0) return;
       fetch('http://localhost:3001/api/delete-multi', {
