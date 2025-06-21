@@ -119,11 +119,7 @@
       background: #e4007f;
       border-color: #e4007f;
     }
-    /* Clear All/全削除/クリアボタンを表示したままにする（JSで動作上書き） */
-    #map {
-      flex: 1 1 auto; min-height: 350px; width: 100vw; height: 70vh; max-height: 100dvh; z-index: 1;
-      display: block;
-    }
+    /* 編集モード時のドット（ハンドル）を小さく */
     .leaflet-editing-icon, .leaflet-touch-icon,
     .leaflet-edit-resize, .leaflet-edit-move {
       width: 4px !important;
@@ -132,6 +128,7 @@
       margin-top: -2px !important;
       border-width: 2px !important;
     }
+    /* 削除モード時は編集用ドットを完全非表示 */
     .leaflet-edit-remove-active .leaflet-editing-icon,
     .leaflet-edit-remove-active .leaflet-touch-icon,
     .leaflet-edit-remove-active .leaflet-edit-resize,
@@ -241,11 +238,11 @@
               // 再描画（消えた図形を復活）
               loadAllPolygons();
               return false;
-            });
+            }, true);
           }
         });
 
-        // 削除モード時は編集用ドットを非表示
+        // 削除モード時は編集用ドットを完全非表示
         const mapContainer = document.getElementById('map');
         if (mapContainer) {
           mapContainer.classList.add('leaflet-edit-remove-active');
