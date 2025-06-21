@@ -37,7 +37,7 @@
     }
     #name { width: 170px; min-width: 120px; max-width: 220px; box-sizing: border-box; }
 
-    /* ？マークを画面右端＋h1中央高さに修正 */
+    /* ？マークをform白地エリア右端中央に設置 */
     .custom-help-container {
       position: absolute;
       right: 14px;
@@ -51,13 +51,13 @@
       height: 40px;
       margin: 0;
     }
-    /* h1にrelativeを指定してabsolute配置を親基準に */
-    h1 {
+    #form {
       position: relative;
     }
     @media (max-width: 900px) {
       #form label { min-width: 100px; max-width: 170px; }
       #form input[type="date"], #form input[type="text"], #name { width: 156px; min-width: 117px; max-width: 221px; }
+      .custom-help-container { right: 10px; }
     }
     @media (max-width: 600px) {
       #form {
@@ -71,7 +71,6 @@
         margin-right: 8px;
         font-size: 0.95em;
       }
-      /* 実施日枠を今の1.15倍に（例：156px→約180px） */
       #form input[type="date"] {
         font-size: 16px !important;
         width: 180px; min-width: 132px; max-width: 254px;
@@ -80,11 +79,8 @@
         font-size: 16px !important;
         width: 156px; min-width: 117px; max-width: 221px;
       }
-      /* 画面幅600px以下でもh1内右端中央位置を維持 */
       .custom-help-container {
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
+        right: 6px;
       }
     }
     @media (max-width: 400px) {
@@ -92,9 +88,7 @@
       #form input[type="date"] { width: 105px; min-width: 80px; max-width: 143px; }
       #form input[type="text"], #name { width: 91px; min-width: 78px; max-width: 143px; }
       .custom-help-container {
-        right: 6px;
-        top: 50%;
-        transform: translateY(-50%);
+        right: 2px;
       }
     }
 
@@ -163,21 +157,6 @@
 <body>
   <h1>
     一致団結ポスティングマップ
-    <!-- ？マークを赤×と同じ右端・中央に移動 -->
-    <span class="custom-help-container" id="customHelpContainer">
-      <button class="custom-help-btn" id="customHelpBtn" title="操作方法">？</button>
-      <div class="custom-help-balloon" id="customHelpBalloon">
-        ＜操作方法＞<br>
-        1. 実施日・名前を入力する<br>
-        2. サイドメニューから「ポリゴンを描画」を選択し、ポスティング実施エリアを囲うようにしてマーキングする<br>
-        <br>
-        ■図形の編集<br>
-        図形選択→自由に変形→図形以外をタップ<br>
-        <br>
-        ■図形の削除<br>
-        削除ボタン→図形選択→Saveボタン
-      </div>
-    </span>
   </h1>
   <div id="form">
     <label for="date">実施日（必須）
@@ -186,6 +165,21 @@
     <label for="name">名前（任意）
       <input type="text" id="name" style="font-size:16px;" inputmode="text" />
     </label>
+    <!-- ？マークをform内右端中央に移動 -->
+    <span class="custom-help-container" id="customHelpContainer">
+      <button class="custom-help-btn" id="customHelpBtn" title="操作方法">？</button>
+      <div class="custom-help-balloon" id="customHelpBalloon">
+        ＜操作方法＞<br>
+        1. 実施日・名前を入力する<br>
+        2. サイドメニューから「図形を描画」を選択し、ポスティング実施エリアを囲うようにしてマーキングする<br>
+        <br>
+        ■図形の編集<br>
+        図形選択→自由に変形→図形以外をタップ<br>
+        <br>
+        ■図形の削除<br>
+        削除ボタン→図形選択→Saveボタン
+      </div>
+    </span>
   </div>
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -193,10 +187,10 @@
   <script>
     // 日本語化
     if (window.L && window.L.drawLocal) {
-      L.drawLocal.draw.toolbar.buttons.polygon = 'ポリゴンを描画';
+      L.drawLocal.draw.toolbar.buttons.polygon = '図形を描画';
       L.drawLocal.edit.toolbar.buttons.edit = '';
       L.drawLocal.edit.toolbar.buttons.remove = '削除';
-      L.drawLocal.edit.handlers.remove.tooltip.text = '削除したいポリゴンをクリックしてください';
+      L.drawLocal.edit.handlers.remove.tooltip.text = '削除したい図形をクリックしてください';
       L.drawLocal.edit.handlers.remove.tooltip.subtext = 'もう一度クリックで削除を解除';
     }
 
@@ -346,7 +340,7 @@
         bindPolygonInfo(layer, date, name);
       }
 
-      // ページ表示時に全ポリゴン取得して描画
+      // ページ表示時に全図形取得して描画
       function loadAllPolygons() {
         fetch('http://localhost:3001/api/polygons')
           .then(res => res.json())
@@ -370,7 +364,7 @@
       }
       loadAllPolygons();
 
-      // ポリゴン新規作成
+      // 図形新規作成
       map.on(L.Draw.Event.CREATED, function (e) {
         const layer = e.layer;
         layer.setStyle && layer.setStyle(polygonStyle);
